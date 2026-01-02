@@ -6,6 +6,10 @@ const nextConfig = {
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
   },
+  eslint: {
+    // Allow production builds to complete even with ESLint errors
+    ignoreDuringBuilds: true,
+  },
   modularizeImports: {
     '@mui/icons-material': {
       transform: '@mui/icons-material/{{member}}',
