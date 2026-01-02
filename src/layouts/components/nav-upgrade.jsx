@@ -9,7 +9,7 @@ export function NavUpgrade({ sx, ...other }) {
       <Button
         variant="outlined"
         size="small"
-        href="https://mavidah.co"
+        href="https://mavidah.com"
         target="_blank"
         rel="noopener"
         fullWidth
