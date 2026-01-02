@@ -11,7 +11,7 @@ export async function sendContactEmail({ name, email, subject, message }) {
   try {
     const data = await resend.emails.send({
       from: 'Mavidah Contact <onboarding@resend.dev>', // Change this to your verified domain
-      to: [process.env.CONTACT_EMAIL || 'contact@mavidah.co'],
+      to: [process.env.CONTACT_EMAIL || 'contact@mavidah.com'],
       replyTo: email,
       subject: `Contact Form: ${subject}`,
       html: `
@@ -48,12 +48,12 @@ export async function sendContactEmail({ name, email, subject, message }) {
 /**
  * Send order confirmation email
  */
-export async function sendOrderConfirmationEmail({ 
-  customerEmail, 
-  customerName, 
-  productName, 
-  amount, 
-  downloadLink 
+export async function sendOrderConfirmationEmail({
+  customerEmail,
+  customerName,
+  productName,
+  amount,
+  downloadLink,
 }) {
   try {
     const data = await resend.emails.send({
@@ -74,7 +74,9 @@ export async function sendOrderConfirmationEmail({
             <p><strong>Amount Paid:</strong> ${amount}</p>
           </div>
           
-          ${downloadLink ? `
+          ${
+            downloadLink
+              ? `
             <div style="margin: 30px 0; text-align: center;">
               <a href="${downloadLink}" 
                  style="background-color: #1976d2; color: white; padding: 12px 30px; 
@@ -82,9 +84,11 @@ export async function sendOrderConfirmationEmail({
                 Download Your Purchase
               </a>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
-          <p>If you have any questions, feel free to contact us at ${process.env.CONTACT_EMAIL || 'contact@mavidah.co'}.</p>
+          <p>If you have any questions, feel free to contact us at ${process.env.CONTACT_EMAIL || 'contact@mavidah.com'}.</p>
           
           <hr style="border: 1px solid #e0e0e0; margin: 30px 0;" />
           
@@ -101,5 +105,3 @@ export async function sendOrderConfirmationEmail({
     return { success: false, error: error.message };
   }
 }
-
-

@@ -11,7 +11,7 @@ export const CONFIG = {
     assetURL: process.env.NEXT_PUBLIC_ASSET_URL ?? '',
     basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? '',
     version: packageJson.version,
-    contactEmail: 'contact@mavidah.co',
+    contactEmail: 'contact@mavidah.com',
   },
   isStaticExport: JSON.parse(`${process.env.BUILD_STATIC_EXPORT}`),
   /**

@@ -82,10 +82,9 @@ export function DisclosureView() {
                   <Divider />
 
                   <Typography variant="body1" paragraph>
-                    Mavidah participates in various affiliate marketing programs, which means we
-                    may earn commissions on purchases made through links on our website. These
-                    affiliate partnerships help us maintain and improve our content at no extra
-                    cost to you.
+                    Mavidah participates in various affiliate marketing programs, which means we may
+                    earn commissions on purchases made through links on our website. These affiliate
+                    partnerships help us maintain and improve our content at no extra cost to you.
                   </Typography>
 
                   <Typography variant="body1" paragraph>
@@ -134,9 +133,9 @@ export function DisclosureView() {
                   </Typography>
 
                   <Typography variant="body1" paragraph>
-                    Sponsored content is created with the same standards of quality and integrity
-                    as our regular content. We maintain editorial independence and will only work
-                    with brands and companies that align with our values and serve our audience's
+                    Sponsored content is created with the same standards of quality and integrity as
+                    our regular content. We maintain editorial independence and will only work with
+                    brands and companies that align with our values and serve our audience's
                     interests.
                   </Typography>
 
@@ -173,10 +172,10 @@ export function DisclosureView() {
                   <Divider />
 
                   <Typography variant="body1" paragraph>
-                    When we review products, services, or resources on Mavidah, we strive to
-                    provide honest, unbiased opinions based on our experience and research. Some
-                    products may be provided to us free of charge for review purposes, while
-                    others are purchased by us independently.
+                    When we review products, services, or resources on Mavidah, we strive to provide
+                    honest, unbiased opinions based on our experience and research. Some products
+                    may be provided to us free of charge for review purposes, while others are
+                    purchased by us independently.
                   </Typography>
 
                   <Typography variant="body1" paragraph>
@@ -186,8 +185,8 @@ export function DisclosureView() {
                   </Typography>
 
                   <Typography variant="body1">
-                    Our goal is to help you make informed decisions, and we take this
-                    responsibility seriously.
+                    Our goal is to help you make informed decisions, and we take this responsibility
+                    seriously.
                   </Typography>
                 </Stack>
               </CardContent>
@@ -219,8 +218,8 @@ export function DisclosureView() {
 
                   <Typography variant="body1" paragraph>
                     The content on Mavidah is for informational and educational purposes only. It
-                    should not be considered as professional legal, financial, or HR advice for
-                    your specific situation.
+                    should not be considered as professional legal, financial, or HR advice for your
+                    specific situation.
                   </Typography>
 
                   <Typography variant="body1" paragraph>
@@ -269,13 +268,13 @@ export function DisclosureView() {
                   </Typography>
 
                   <Typography variant="body1" paragraph>
-                    All sales are final for digital products. Due to the nature of digital goods,
-                    we cannot offer refunds once a product has been downloaded or accessed.
+                    All sales are final for digital products. Due to the nature of digital goods, we
+                    cannot offer refunds once a product has been downloaded or accessed.
                   </Typography>
 
                   <Typography variant="body1">
-                    If you experience technical issues accessing your purchase, please contact us
-                    at <strong>contact@mavidah.co</strong> and we'll be happy to assist you.
+                    If you experience technical issues accessing your purchase, please contact us at{' '}
+                    <strong>contact@mavidah.com</strong> and we'll be happy to assist you.
                   </Typography>
                 </Stack>
               </CardContent>
@@ -306,9 +305,9 @@ export function DisclosureView() {
                   <Divider />
 
                   <Typography variant="body1" paragraph>
-                    Mavidah welcomes expert contributions from HR professionals, career coaches,
-                    and workplace specialists. Guest posts will be clearly attributed to their
-                    authors, and any potential conflicts of interest will be disclosed.
+                    Mavidah welcomes expert contributions from HR professionals, career coaches, and
+                    workplace specialists. Guest posts will be clearly attributed to their authors,
+                    and any potential conflicts of interest will be disclosed.
                   </Typography>
 
                   <Typography variant="body1">
@@ -344,14 +343,14 @@ export function DisclosureView() {
                   <Divider />
 
                   <Typography variant="body1" paragraph>
-                    We may update this disclosure policy from time to time to reflect changes in
-                    our practices or legal requirements. The updated version will be posted on
-                    this page with the revision date.
+                    We may update this disclosure policy from time to time to reflect changes in our
+                    practices or legal requirements. The updated version will be posted on this page
+                    with the revision date.
                   </Typography>
 
                   <Typography variant="body1">
-                    We encourage you to review this page periodically to stay informed about how
-                    we maintain transparency with our readers.
+                    We encourage you to review this page periodically to stay informed about how we
+                    maintain transparency with our readers.
                   </Typography>
                 </Stack>
               </CardContent>
@@ -369,11 +368,11 @@ export function DisclosureView() {
               <Stack spacing={2}>
                 <Typography variant="h5">Questions About Our Disclosures?</Typography>
                 <Typography variant="body1" color="text.secondary">
-                  If you have any questions about our disclosure policies or practices, please
-                  don't hesitate to contact us.
+                  If you have any questions about our disclosure policies or practices, please don't
+                  hesitate to contact us.
                 </Typography>
                 <Typography variant="body2">
-                  Email: <strong>contact@mavidah.co</strong>
+                  Email: <strong>contact@mavidah.com</strong>
                 </Typography>
               </Stack>
             </Box>
@@ -388,4 +387,3 @@ export function DisclosureView() {
     </MainLayout>
   );
 }
-
