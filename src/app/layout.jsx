@@ -18,6 +18,22 @@ import { AuthProvider as SupabaseAuthProvider } from 'src/auth/context/supabase'
 
 // ----------------------------------------------------------------------
 
+export const metadata = {
+  title: {
+    default: 'Mavidah - HR Knowledge Hub',
+    template: '%s | Mavidah',
+  },
+  description: 'Your trusted hub for HR knowledge, career guidance, and workplace insights.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo/mavidah-logo.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/logo/mavidah-logo.svg',
+  },
+};
+
 export const viewport = {
   width: 'device-width',
   initialScale: 1,

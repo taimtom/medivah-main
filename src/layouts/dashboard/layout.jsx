@@ -19,7 +19,6 @@ import { NavMobile } from './nav-mobile';
 import { layoutClasses } from '../classes';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
-import { _account } from '../config-nav-account';
 import { HeaderBase } from '../core/header-base';
 import { _workspaces } from '../config-nav-workspace';
 import { LayoutSection } from '../core/layout-section';
@@ -73,7 +72,7 @@ export function DashboardLayout({ sx, children, data }) {
                 { value: 'cn', label: 'Chinese', countryCode: 'CN' },
                 { value: 'ar', label: 'Arabic', countryCode: 'SA' },
               ],
-              account: _account,
+              account: [],
               contacts: _contacts,
               workspaces: _workspaces,
               notifications: _notifications,
@@ -82,6 +81,9 @@ export function DashboardLayout({ sx, children, data }) {
               signIn: false,
               purchase: false,
               helpLink: false,
+              workspaces: false,
+              localization: false,
+              notifications: false,
             }}
             slots={{
               topArea: (

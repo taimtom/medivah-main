@@ -60,7 +60,9 @@ export function JobFormView({ id }) {
         type: data.type || '',
         experience: data.experience || '',
         description: data.description || '',
-        requirements: data.requirements || '',
+        requirements: Array.isArray(data.requirements)
+          ? data.requirements.join('\n')
+          : data.requirements || '',
         apply_email: data.apply_email || CONFIG.site.contactEmail,
         published: data.published || false,
       });
@@ -85,8 +87,17 @@ export function JobFormView({ id }) {
     setSaving(true);
 
     try {
+      // Convert requirements string to array (split by newlines, filter empty lines)
+      const requirementsArray = formData.requirements
+        ? formData.requirements
+            .split('\n')
+            .map((req) => req.trim())
+            .filter((req) => req.length > 0)
+        : [];
+
       const jobData = {
         ...formData,
+        requirements: requirementsArray,
         updated_at: new Date().toISOString(),
       };
 
@@ -208,9 +219,9 @@ export function JobFormView({ id }) {
                   value={formData.requirements}
                   onChange={handleChange}
                   multiline
-                  rows={4}
+                  rows={6}
                   fullWidth
-                  helperText="List the key requirements for this position"
+                  helperText="Enter each requirement on a new line. They will be stored as a list."
                 />
 
                 <TextField
@@ -226,11 +237,7 @@ export function JobFormView({ id }) {
 
                 <FormControlLabel
                   control={
-                    <Switch
-                      name="published"
-                      checked={formData.published}
-                      onChange={handleChange}
-                    />
+                    <Switch name="published" checked={formData.published} onChange={handleChange} />
                   }
                   label="Published"
                 />
@@ -239,10 +246,7 @@ export function JobFormView({ id }) {
           </Card>
 
           <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button
-              variant="outlined"
-              onClick={() => router.push(paths.dashboard.jobs.root)}
-            >
+            <Button variant="outlined" onClick={() => router.push(paths.dashboard.jobs.root)}>
               Cancel
             </Button>
             <LoadingButton
@@ -259,5 +263,3 @@ export function JobFormView({ id }) {
     </Container>
   );
 }
-
-

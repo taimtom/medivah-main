@@ -5,21 +5,25 @@
 I've successfully configured your application to use **Supabase Authentication** instead of JWT. Here's what was implemented:
 
 ### 1. **Auth Configuration**
+
 - ✅ Changed `CONFIG.auth.method` from `'jwt'` to `'supabase'`
 - ✅ Updated auth routes to include Supabase paths
 - ✅ Modified auth guard to support both JWT and Supabase
 
 ### 2. **Supabase Auth Provider**
+
 - ✅ Created `src/auth/context/supabase/auth-provider.jsx`
 - ✅ Created `src/auth/context/supabase/action.js` with auth functions
 - ✅ Integrated with Supabase client for session management
 
 ### 3. **Sign-In & Sign-Up Pages**
+
 - ✅ Created `/auth/supabase/sign-in` page
 - ✅ Created `/auth/supabase/sign-up` page
 - ✅ Both pages use Material-UI forms with validation
 
 ### 4. **Root Layout Update**
+
 - ✅ Updated to dynamically select auth provider based on config
 - ✅ Supports both JWT and Supabase authentication
 
@@ -159,12 +163,14 @@ npm run dev
 ## 🎯 Why This Is Better
 
 ### Before (JWT):
+
 - ❌ Separate authentication system
 - ❌ RLS policies didn't work
 - ❌ Had to allow unauthenticated access
 - ❌ Less secure
 
 ### After (Supabase Auth):
+
 - ✅ **Integrated authentication** with your database
 - ✅ **RLS policies work automatically**
 - ✅ **Secure by default** - only authenticated users can modify data
@@ -178,11 +184,13 @@ npm run dev
 ### Row Level Security (RLS) is Now Active:
 
 1. **Public users** can:
+
    - View published blogs and jobs
    - View all products
    - Create orders (when purchasing)
 
 2. **Authenticated users** (your admin account) can:
+
    - Create, read, update, delete **all content**
    - Manage orders
    - Full dashboard access
@@ -196,15 +204,18 @@ npm run dev
 ## 📝 Additional Features Available
 
 ### Sign Up New Admins:
+
 - Go to `/auth/supabase/sign-up`
 - Create new admin accounts
 - All authenticated users have admin access
 
 ### Password Reset:
+
 - Can be added later if needed
 - Supabase has built-in email templates
 
 ### OAuth Login:
+
 - Google, GitHub, etc. can be added
 - Configure in Supabase Dashboard → Authentication → Providers
 
@@ -213,6 +224,7 @@ npm run dev
 ## 🐛 Troubleshooting
 
 ### If you can't sign in:
+
 1. **Check Supabase URL and Key** in `.env.local`:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
@@ -222,6 +234,7 @@ npm run dev
 3. **Check Auto Confirm** is enabled for the user
 
 ### If RLS errors persist:
+
 1. Run the SQL script above to update policies
 2. Make sure you're signed in with a Supabase account
 3. Check browser console for specific errors
@@ -231,6 +244,7 @@ npm run dev
 ## 🎉 You're All Set!
 
 Your application now has:
+
 - ✅ Secure Supabase authentication
 - ✅ Working RLS policies
 - ✅ Protected admin dashboard
@@ -239,5 +253,3 @@ Your application now has:
 - ✅ Full CRUD operations for all content
 
 **Happy managing your Mavidah HR website!** 🚀
-
-

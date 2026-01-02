@@ -21,7 +21,12 @@ import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
-const CATEGORIES = ['Templates & Tools', 'Guides & Tips', 'Learning & Courses', 'Research & Insights'];
+const CATEGORIES = [
+  'Templates & Tools',
+  'Guides & Tips',
+  'Learning & Courses',
+  'Research & Insights',
+];
 
 export function ProductFormView({ id }) {
   const router = useRouter();
@@ -29,6 +34,7 @@ export function ProductFormView({ id }) {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     description: '',
     price: '',
     category: '',
@@ -51,6 +57,7 @@ export function ProductFormView({ id }) {
       if (error) throw error;
       setFormData({
         name: data.name || '',
+        slug: data.slug || '',
         description: data.description || '',
         price: data.price || '',
         category: data.category || '',
@@ -72,6 +79,17 @@ export function ProductFormView({ id }) {
       ...prev,
       [name]: name === 'published' ? checked : value,
     }));
+
+    // Auto-generate slug from product name
+    if (name === 'name' && !id) {
+      const slug = value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+      setFormData((prev) => ({ ...prev, slug }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -79,8 +97,20 @@ export function ProductFormView({ id }) {
     setSaving(true);
 
     try {
+      // Ensure slug is generated if missing
+      let slug = formData.slug;
+      if (!slug && formData.name) {
+        slug = formData.name
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+      }
+
       const productData = {
         ...formData,
+        slug,
         price: parseFloat(formData.price),
         updated_at: new Date().toISOString(),
       };
@@ -134,6 +164,16 @@ export function ProductFormView({ id }) {
                   onChange={handleChange}
                   required
                   fullWidth
+                />
+
+                <TextField
+                  name="slug"
+                  label="Slug"
+                  value={formData.slug}
+                  onChange={handleChange}
+                  required
+                  fullWidth
+                  helperText="URL-friendly version of the product name (auto-generated)"
                 />
 
                 <TextField
@@ -194,11 +234,7 @@ export function ProductFormView({ id }) {
 
                 <FormControlLabel
                   control={
-                    <Switch
-                      name="published"
-                      checked={formData.published}
-                      onChange={handleChange}
-                    />
+                    <Switch name="published" checked={formData.published} onChange={handleChange} />
                   }
                   label="Published"
                 />
@@ -207,10 +243,7 @@ export function ProductFormView({ id }) {
           </Card>
 
           <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button
-              variant="outlined"
-              onClick={() => router.push(paths.dashboard.products.root)}
-            >
+            <Button variant="outlined" onClick={() => router.push(paths.dashboard.products.root)}>
               Cancel
             </Button>
             <LoadingButton
@@ -227,5 +260,3 @@ export function ProductFormView({ id }) {
     </Container>
   );
 }
-
-
