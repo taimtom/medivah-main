@@ -86,6 +86,25 @@ export function CheckoutView() {
     setProcessing(true);
 
     try {
+      // Wait for Paystack script to load
+      if (!window.PaystackPop) {
+        // Wait up to 5 seconds for the script to load
+        let attempts = 0;
+        while (!window.PaystackPop && attempts < 50) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.PaystackPop) {
+          throw new Error('Paystack script failed to load. Please refresh the page and try again.');
+        }
+      }
+
+      // Check if public key is available
+      if (!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY) {
+        throw new Error('Paystack is not configured. Please contact support.');
+      }
+
       // Initialize Paystack
       const { initializePaystack, generatePaystackReference } = await import('src/lib/paystack/client');
       

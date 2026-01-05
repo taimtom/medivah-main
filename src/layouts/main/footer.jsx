@@ -35,8 +35,8 @@ const FOOTER_LINKS = [
   {
     title: 'Legal',
     links: [
-      { name: 'Privacy Policy', path: '/privacy-policy' },
-      { name: 'Terms of Service', path: '/terms-of-service' },
+      { name: 'Privacy Policy', path: paths.privacy },
+      { name: 'Terms of Service', path: paths.terms },
       { name: 'Disclosure', path: paths.disclosure },
     ],
   },

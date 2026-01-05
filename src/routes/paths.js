@@ -23,6 +23,8 @@ export const paths = {
   jobs: '/jobs',
   contact: '/contact',
   disclosure: '/disclosure',
+  privacy: '/privacy',
+  terms: '/terms',
   faqs: '#', // Placeholder for FAQs page
   minimalStore: '#', // Placeholder for store link
   
