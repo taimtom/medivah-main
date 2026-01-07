@@ -64,5 +64,13 @@ export const paths = {
       root: `${ROOTS.DASHBOARD}/orders`,
       details: (id) => `${ROOTS.DASHBOARD}/orders/${id}`,
     },
+    newsletter: {
+      root: `${ROOTS.DASHBOARD}/newsletter`,
+      subscribers: `${ROOTS.DASHBOARD}/newsletter/subscribers`,
+      new: `${ROOTS.DASHBOARD}/newsletter/new`,
+      edit: (id) => `${ROOTS.DASHBOARD}/newsletter/${id}/edit`,
+      preview: (id) => `${ROOTS.DASHBOARD}/newsletter/${id}/preview`,
+      analytics: `${ROOTS.DASHBOARD}/newsletter/analytics`,
+    },
   },
 };

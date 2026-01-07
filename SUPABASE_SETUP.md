@@ -80,6 +80,52 @@ CREATE TABLE orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Newsletter Subscribers table
+CREATE TABLE newsletter_subscribers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  name TEXT,
+  status TEXT DEFAULT 'subscribed' CHECK (status IN ('subscribed', 'unsubscribed', 'bounced')),
+  source TEXT DEFAULT 'manual' CHECK (source IN ('manual', 'purchase', 'signup')),
+  subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+  unsubscribed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Newsletters table
+CREATE TABLE newsletters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject TEXT NOT NULL,
+  content_html TEXT NOT NULL,
+  content_text TEXT,
+  preview_text TEXT,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+  scheduled_at TIMESTAMPTZ,
+  sent_at TIMESTAMPTZ,
+  recipients_count INTEGER DEFAULT 0,
+  opened_count INTEGER DEFAULT 0,
+  clicked_count INTEGER DEFAULT 0,
+  failed_count INTEGER DEFAULT 0,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Newsletter sends tracking
+CREATE TABLE newsletter_sends (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  newsletter_id UUID REFERENCES newsletters(id) ON DELETE CASCADE,
+  subscriber_id UUID REFERENCES newsletter_subscribers(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed')),
+  sent_at TIMESTAMPTZ,
+  opened_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ,
+  bounce_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_blogs_slug ON blogs(slug);
 CREATE INDEX idx_blogs_published ON blogs(published);
@@ -88,6 +134,12 @@ CREATE INDEX idx_products_slug ON products(slug);
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_jobs_published ON jobs(published);
 CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_subscribers_email ON newsletter_subscribers(email);
+CREATE INDEX idx_subscribers_status ON newsletter_subscribers(status);
+CREATE INDEX idx_newsletters_status ON newsletters(status);
+CREATE INDEX idx_sends_newsletter_id ON newsletter_sends(newsletter_id);
+CREATE INDEX idx_sends_subscriber_id ON newsletter_sends(subscriber_id);
+CREATE INDEX idx_sends_status ON newsletter_sends(status);
 ```
 
 ### Set Up Row Level Security (RLS)
@@ -98,6 +150,9 @@ ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_sends ENABLE ROW LEVEL SECURITY;
 
 -- Blogs policies
 CREATE POLICY "Blogs are viewable by everyone" ON blogs
@@ -135,6 +190,30 @@ CREATE POLICY "Authenticated users can create orders" ON orders
 
 CREATE POLICY "Authenticated users can update orders" ON orders
   FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Newsletter subscribers policies
+CREATE POLICY "Anyone can subscribe" ON newsletter_subscribers
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can view subscribers" ON newsletter_subscribers
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update subscribers" ON newsletter_subscribers
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Newsletters policies
+CREATE POLICY "Authenticated users can manage newsletters" ON newsletters
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Newsletter sends policies
+CREATE POLICY "Authenticated users can view sends" ON newsletter_sends
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "System can insert sends" ON newsletter_sends
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System can update sends" ON newsletter_sends
+  FOR UPDATE USING (true);
 ```
 
 ## 3. Set Up Storage Buckets

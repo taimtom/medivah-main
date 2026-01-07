@@ -13,6 +13,7 @@ import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
 import { CONFIG } from 'src/config-global';
 import { Logo } from 'src/components/logo';
+import { NewsletterSubscribeForm } from 'src/components/newsletter/newsletter-subscribe-form';
 
 // ----------------------------------------------------------------------
 
@@ -75,7 +76,7 @@ export function Footer() {
 
           {/* Footer Links */}
           {FOOTER_LINKS.map((section) => (
-            <Grid item xs={6} md={2.66} key={section.title}>
+            <Grid item xs={6} md={2} key={section.title}>
               <Typography variant="h6" gutterBottom>
                 {section.title}
               </Typography>
@@ -95,6 +96,14 @@ export function Footer() {
               </Stack>
             </Grid>
           ))}
+
+          {/* Newsletter Section */}
+          <Grid item xs={12} md={4}>
+            <Typography variant="h6" gutterBottom>
+              Newsletter
+            </Typography>
+            <NewsletterSubscribeForm variant="compact" />
+          </Grid>
         </Grid>
 
         <Divider sx={{ my: 4 }} />

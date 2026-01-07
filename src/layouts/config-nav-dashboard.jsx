@@ -70,4 +70,14 @@ export const navData = [
       { title: 'Orders', path: paths.dashboard.orders.root, icon: ICONS.order },
     ],
   },
+  /**
+   * Marketing
+   */
+  {
+    subheader: 'Marketing',
+    items: [
+      { title: 'Newsletters', path: paths.dashboard.newsletter.root, icon: ICONS.mail },
+      { title: 'Subscribers', path: paths.dashboard.newsletter.subscribers, icon: ICONS.user },
+    ],
+  },
 ];

@@ -105,3 +105,97 @@ export async function sendOrderConfirmationEmail({
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Send newsletter email
+ */
+export async function sendNewsletterEmail({
+  to,
+  subject,
+  html,
+  preview_text,
+  unsubscribeUrl,
+  trackingPixelUrl,
+}) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3030';
+    const contactEmail = process.env.CONTACT_EMAIL || 'contact@mavidah.com';
+
+    // Add tracking pixel and unsubscribe link to HTML
+    const trackingPixel = trackingPixelUrl
+      ? `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" />`
+      : '';
+
+    const unsubscribeFooter = unsubscribeUrl
+      ? `
+        <hr style="border: 1px solid #e0e0e0; margin: 30px 0;" />
+        <div style="text-align: center; padding: 20px 0;">
+          <p style="color: #666; font-size: 12px; margin: 10px 0;">
+            You're receiving this because you subscribed to Mavidah's newsletter.
+          </p>
+          <p style="margin: 10px 0;">
+            <a href="${unsubscribeUrl}" 
+               style="color: #1976d2; text-decoration: none; font-size: 12px;">
+              Unsubscribe
+            </a>
+          </p>
+        </div>
+      `
+      : '';
+
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${preview_text ? `<meta name="description" content="${preview_text}">` : ''}
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background-color: #1976d2; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Mavidah</h1>
+            <p style="color: #e3f2fd; margin: 5px 0 0 0; font-size: 14px;">Your HR Knowledge Hub</p>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 30px;">
+            ${preview_text ? `<p style="color: #666; font-size: 14px; margin-bottom: 20px;">${preview_text}</p>` : ''}
+            ${html}
+          </div>
+          
+          ${unsubscribeFooter}
+          
+          <!-- Footer -->
+          <div style="background-color: #f5f5f5; padding: 20px; text-align: center;">
+            <p style="color: #666; font-size: 12px; margin: 5px 0;">
+              © ${new Date().getFullYear()} Mavidah. All rights reserved.
+            </p>
+            <p style="color: #666; font-size: 12px; margin: 5px 0;">
+              <a href="${baseUrl}" style="color: #1976d2; text-decoration: none;">Visit our website</a>
+            </p>
+            <p style="color: #666; font-size: 12px; margin: 5px 0;">
+              Questions? Contact us at <a href="mailto:${contactEmail}" style="color: #1976d2; text-decoration: none;">${contactEmail}</a>
+            </p>
+          </div>
+        </div>
+        ${trackingPixel}
+      </body>
+      </html>
+    `;
+
+    const data = await resend.emails.send({
+      from: 'Mavidah <onboarding@resend.dev>', // Change this to your verified domain
+      to: [to],
+      subject,
+      html: fullHtml,
+      text: html.replace(/<[^>]*>/g, '').replace(/\n\s*\n/g, '\n\n'), // Plain text fallback
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Newsletter email error:', error);
+    return { success: false, error: error.message };
+  }
+}

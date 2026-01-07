@@ -34,6 +34,49 @@ export async function POST(request) {
 
     if (error) throw error;
 
+    // Auto-subscribe customer to newsletter
+    try {
+      const { data: existing } = await supabase
+        .from('newsletter_subscribers')
+        .select('id, status')
+        .eq('email', customer_email.toLowerCase())
+        .single();
+
+      if (!existing) {
+        // Create new subscriber
+        await supabase.from('newsletter_subscribers').insert([
+          {
+            email: customer_email.toLowerCase(),
+            status: 'subscribed',
+            source: 'purchase',
+          },
+        ]);
+      } else if (existing.status === 'unsubscribed') {
+        // Re-subscribe if previously unsubscribed
+        await supabase
+          .from('newsletter_subscribers')
+          .update({
+            status: 'subscribed',
+            source: 'purchase',
+            unsubscribed_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+      } else if (existing.status === 'subscribed') {
+        // Update source if already subscribed
+        await supabase
+          .from('newsletter_subscribers')
+          .update({
+            source: 'purchase',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+      }
+    } catch (newsletterError) {
+      // Don't fail order creation if newsletter subscription fails
+      console.error('Newsletter auto-subscribe error:', newsletterError);
+    }
+
     return NextResponse.json(
       { message: 'Order created successfully', order: data },
       { status: 201 }
