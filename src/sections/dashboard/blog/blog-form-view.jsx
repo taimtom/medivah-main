@@ -21,6 +21,7 @@ import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
+import Divider from '@mui/material/Divider';
 
 import { Iconify } from 'src/components/iconify';
 import { Editor } from 'src/components/editor';
@@ -45,6 +46,7 @@ export function BlogFormView({ id }) {
     featured_image: '',
     tags: '',
     published: false,
+    paywall_enabled: false,
   });
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export function BlogFormView({ id }) {
         featured_image: data.featured_image || '',
         tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
         published: data.published || false,
+        paywall_enabled: data.paywall_enabled || false,
       });
     } catch (error) {
       console.error('Error fetching blog:', error);
@@ -333,6 +336,37 @@ export function BlogFormView({ id }) {
                       {formData.published && (
                         <Alert severity="success" icon={<Iconify icon="solar:check-circle-bold" />}>
                           This post will be published immediately
+                        </Alert>
+                      )}
+
+                      <Divider />
+
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            name="paywall_enabled"
+                            checked={formData.paywall_enabled}
+                            onChange={handleChange}
+                            color="warning"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="subtitle2">
+                              Newsletter Paywall
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {formData.paywall_enabled
+                                ? 'Readers must subscribe to newsletter to read full article'
+                                : 'Full article is available to all readers'}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+
+                      {formData.paywall_enabled && (
+                        <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />}>
+                          When enabled, only the first half of the article will be visible. Readers must subscribe to your newsletter to continue reading.
                         </Alert>
                       )}
                     </Stack>

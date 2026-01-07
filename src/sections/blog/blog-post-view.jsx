@@ -23,6 +23,7 @@ import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { MainLayout } from 'src/layouts/main';
 import { BlogDisclosureSection } from 'src/sections/disclosure';
+import { NewsletterSubscribeForm } from 'src/components/newsletter/newsletter-subscribe-form';
 import {
   toggleBlogLike,
   getBlogLikeStats,
@@ -53,11 +54,71 @@ export function BlogPostView({ slug }) {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentSuccess, setCommentSuccess] = useState('');
   const [commentError, setCommentError] = useState('');
+  
+  // Paywall state
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [truncatedContent, setTruncatedContent] = useState(null);
 
   useEffect(() => {
     fetchBlog();
+    // Check if blog is already unlocked (from localStorage)
+    const unlockedKey = `blog_unlocked_${slug}`;
+    const unlocked = typeof window !== 'undefined' && localStorage.getItem(unlockedKey) === 'true';
+    setIsUnlocked(unlocked);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // Truncate content on client-side when paywall is enabled
+  useEffect(() => {
+    if (blog && blog.paywall_enabled && !isUnlocked && typeof window !== 'undefined') {
+      // Helper function to truncate HTML content to approximately half
+      const truncateHTML = (html, ratio = 0.5) => {
+        if (!html) return '';
+        
+        // Remove HTML tags for length calculation
+        const textContent = html.replace(/<[^>]*>/g, '');
+        const targetLength = Math.floor(textContent.length * ratio);
+        
+        if (targetLength >= textContent.length) return html;
+        
+        // Create a temporary element to parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Traverse and truncate
+        let currentLength = 0;
+        let truncated = false;
+        
+        const truncateNode = (node) => {
+          if (truncated) return;
+          
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            if (currentLength + text.length <= targetLength) {
+              currentLength += text.length;
+            } else {
+              node.textContent = text.substring(0, targetLength - currentLength) + '...';
+              currentLength = targetLength;
+              truncated = true;
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+              if (truncated) break;
+              truncateNode(child);
+            }
+          }
+        };
+        
+        truncateNode(tempDiv);
+        return tempDiv.innerHTML;
+      };
+      
+      setTruncatedContent(truncateHTML(blog.content, 0.5));
+    } else if (blog && (!blog.paywall_enabled || isUnlocked)) {
+      setTruncatedContent(null);
+    }
+  }, [blog, isUnlocked]);
 
   const fetchBlog = async () => {
     try {
@@ -273,36 +334,103 @@ export function BlogPostView({ slug }) {
 
       {/* Content */}
       <Container maxWidth="md" sx={{ py: { xs: 5, md: 8 } }}>
-        <Box
-          sx={{
-            '& h1, & h2, & h3, & h4, & h5, & h6': {
-              mt: 3,
-              mb: 2,
-            },
-            '& p': {
-              mb: 2,
-              lineHeight: 1.8,
-            },
-            '& ul, & ol': {
-              pl: 3,
-              mb: 2,
-            },
-            '& li': {
-              mb: 1,
-            },
-            '& img': {
-              maxWidth: '100%',
-              height: 'auto',
-              borderRadius: 1,
-              my: 3,
-            },
-            '& a': {
-              color: 'primary.main',
-              textDecoration: 'underline',
-            },
-          }}
-          dangerouslySetInnerHTML={{ __html: blog.content }}
-        />
+        {(() => {
+          const shouldShowPaywall = blog.paywall_enabled && !isUnlocked;
+          const contentToShow = shouldShowPaywall && truncatedContent !== null 
+            ? truncatedContent 
+            : blog.content;
+          
+          return (
+            <>
+              <Box
+                sx={{
+                  '& h1, & h2, & h3, & h4, & h5, & h6': {
+                    mt: 3,
+                    mb: 2,
+                  },
+                  '& p': {
+                    mb: 2,
+                    lineHeight: 1.8,
+                  },
+                  '& ul, & ol': {
+                    pl: 3,
+                    mb: 2,
+                  },
+                  '& li': {
+                    mb: 1,
+                  },
+                  '& img': {
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: 1,
+                    my: 3,
+                  },
+                  '& a': {
+                    color: 'primary.main',
+                    textDecoration: 'underline',
+                  },
+                  position: 'relative',
+                  ...(shouldShowPaywall && truncatedContent !== null && {
+                    maxHeight: '600px',
+                    overflow: 'hidden',
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '200px',
+                      background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.95))',
+                      pointerEvents: 'none',
+                    },
+                  }),
+                }}
+                dangerouslySetInnerHTML={{ __html: contentToShow }}
+              />
+              
+              {shouldShowPaywall && (
+                <Card
+                  sx={{
+                    mt: 4,
+                    border: 2,
+                    borderColor: 'primary.main',
+                    bgcolor: alpha(theme.palette.primary.main, 0.04),
+                  }}
+                >
+                  <CardContent>
+                    <Stack spacing={3} alignItems="center" sx={{ textAlign: 'center', py: 2 }}>
+                      <Iconify icon="solar:lock-password-bold-duotone" width={64} sx={{ color: 'primary.main' }} />
+                      <Box>
+                        <Typography variant="h5" gutterBottom>
+                          Continue Reading
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Subscribe to our newsletter to unlock the rest of this article and get access to exclusive HR insights, career tips, and resources.
+                        </Typography>
+                      </Box>
+                      <Box sx={{ width: '100%', maxWidth: 400 }}>
+                        <NewsletterSubscribeForm
+                          variant="compact"
+                          onSuccess={() => {
+                            // Unlock the article
+                            if (typeof window !== 'undefined') {
+                              const unlockedKey = `blog_unlocked_${slug}`;
+                              localStorage.setItem(unlockedKey, 'true');
+                              setIsUnlocked(true);
+                            }
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Already subscribed? Reload the page to unlock.
+                      </Typography>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          );
+        })()}
 
         <Divider sx={{ my: 5 }} />
 
