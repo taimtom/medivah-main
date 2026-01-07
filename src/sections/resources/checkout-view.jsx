@@ -14,6 +14,7 @@ import TextField from '@mui/material/TextField';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
 
 import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
@@ -86,6 +87,31 @@ export function CheckoutView() {
     setProcessing(true);
 
     try {
+      // Handle free products differently
+      if (product.is_free) {
+        const response = await fetch('/api/products/free-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_id: product.id,
+            customer_email: formData.email,
+            customer_name: formData.name,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Success! Check your email for the download link.');
+          router.push('/resources');
+        } else {
+          alert(data.error || 'Failed to process free access. Please try again.');
+        }
+        setProcessing(false);
+        return;
+      }
+
+      // Paid products - use Paystack
       // Wait for Paystack script to load
       if (!window.PaystackPop) {
         // Wait up to 5 seconds for the script to load
@@ -155,8 +181,8 @@ export function CheckoutView() {
         },
       });
     } catch (error) {
-      console.error('Paystack error:', error);
-      alert('Failed to initialize payment. Please try again.');
+      console.error('Checkout error:', error);
+      alert('Failed to process. Please try again.');
       setProcessing(false);
     }
   };
@@ -211,12 +237,23 @@ export function CheckoutView() {
           Checkout
         </Typography>
 
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Note:</strong> Paystack payment integration is currently being set up. 
-            This is a preview of the checkout flow.
-          </Typography>
-        </Alert>
+        {!product.is_free && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Note:</strong> Paystack payment integration is currently being set up. 
+              This is a preview of the checkout flow.
+            </Typography>
+          </Alert>
+        )}
+
+        {product.is_free && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Free Resource:</strong> This product is free! Just provide your email address 
+              to receive instant access to the download link.
+            </Typography>
+          </Alert>
+        )}
 
         <Stack spacing={3}>
           {/* Order Summary */}
@@ -230,19 +267,26 @@ export function CheckoutView() {
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body1">{product.name}</Typography>
-                  <Typography variant="body1" fontWeight="bold">
-                    {formatPrice(product.price)}
-                  </Typography>
+                  {product.is_free ? (
+                    <Chip label="FREE" color="success" size="small" />
+                  ) : (
+                    <Typography variant="body1" fontWeight="bold">
+                      {formatPrice(product.price)}
+                    </Typography>
+                  )}
                 </Stack>
                 
-                <Divider />
-                
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="h6">Total</Typography>
-                  <Typography variant="h6" color="primary.main">
-                    {formatPrice(product.price)}
-                  </Typography>
-                </Stack>
+                {!product.is_free && (
+                  <>
+                    <Divider />
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="h6">Total</Typography>
+                      <Typography variant="h6" color="primary.main">
+                        {formatPrice(product.price)}
+                      </Typography>
+                    </Stack>
+                  </>
+                )}
               </Stack>
             </CardContent>
           </Card>
@@ -273,27 +317,52 @@ export function CheckoutView() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  helperText="We'll send your purchase receipt and download link to this email"
+                  helperText={
+                    product.is_free
+                      ? "We'll send the download link to this email and subscribe you to our newsletter"
+                      : "We'll send your purchase receipt and download link to this email"
+                  }
                 />
               </Stack>
             </CardContent>
           </Card>
 
-          {/* Payment Button */}
+          {/* Action Button */}
           <Button
             variant="contained"
             size="large"
             fullWidth
             onClick={handleCheckout}
             disabled={processing}
-            startIcon={processing ? <CircularProgress size={20} /> : <Iconify icon="solar:card-bold-duotone" />}
+            color={product.is_free ? 'success' : 'primary'}
+            startIcon={
+              processing ? (
+                <CircularProgress size={20} />
+              ) : product.is_free ? (
+                <Iconify icon="solar:download-bold-duotone" />
+              ) : (
+                <Iconify icon="solar:card-bold-duotone" />
+              )
+            }
           >
-            {processing ? 'Processing...' : `Pay ${formatPrice(product.price)}`}
+            {processing
+              ? 'Processing...'
+              : product.is_free
+              ? 'Get Free Access'
+              : `Pay ${formatPrice(product.price)}`}
           </Button>
 
-          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-            Secured by Paystack. Your payment information is encrypted and secure.
-          </Typography>
+          {!product.is_free && (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+              Secured by Paystack. Your payment information is encrypted and secure.
+            </Typography>
+          )}
+
+          {product.is_free && (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+              By accessing this free resource, you'll be subscribed to our newsletter for updates and exclusive content.
+            </Typography>
+          )}
         </Stack>
       </Container>
     </Box>

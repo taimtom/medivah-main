@@ -41,6 +41,7 @@ CREATE TABLE products (
   description TEXT,
   category TEXT NOT NULL,
   price DECIMAL(10,2) NOT NULL,
+  is_free BOOLEAN DEFAULT false,
   file_url TEXT,
   image_url TEXT,
   published BOOLEAN DEFAULT false,

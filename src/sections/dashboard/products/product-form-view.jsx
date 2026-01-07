@@ -14,6 +14,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import MenuItem from '@mui/material/MenuItem';
 import LoadingButton from '@mui/lab/LoadingButton';
+import Box from '@mui/material/Box';
 
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
@@ -41,6 +42,7 @@ export function ProductFormView({ id }) {
     image_url: '',
     file_url: '',
     published: false,
+    is_free: false,
   });
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export function ProductFormView({ id }) {
         image_url: data.image_url || '',
         file_url: data.file_url || '',
         published: data.published || false,
+        is_free: data.is_free || false,
       });
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -77,7 +80,7 @@ export function ProductFormView({ id }) {
     const { name, value, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'published' ? checked : value,
+      [name]: name === 'published' || name === 'is_free' ? checked : value,
     }));
 
     // Auto-generate slug from product name
@@ -89,6 +92,11 @@ export function ProductFormView({ id }) {
         .replace(/-+/g, '-')
         .trim();
       setFormData((prev) => ({ ...prev, slug }));
+    }
+
+    // If free is checked, set price to 0
+    if (name === 'is_free' && checked) {
+      setFormData((prev) => ({ ...prev, price: '0' }));
     }
   };
 
@@ -111,7 +119,7 @@ export function ProductFormView({ id }) {
       const productData = {
         ...formData,
         slug,
-        price: parseFloat(formData.price),
+        price: formData.is_free ? 0 : parseFloat(formData.price || 0),
         updated_at: new Date().toISOString(),
       };
 
@@ -187,15 +195,40 @@ export function ProductFormView({ id }) {
                   fullWidth
                 />
 
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="is_free"
+                      checked={formData.is_free}
+                      onChange={handleChange}
+                      color="success"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="subtitle2">
+                        Free Product
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formData.is_free
+                          ? 'Users only need to provide email to access (no payment required)'
+                          : 'Product requires payment to access'}
+                      </Typography>
+                    </Box>
+                  }
+                />
+
                 <TextField
                   name="price"
                   label="Price (NGN)"
                   type="number"
                   value={formData.price}
                   onChange={handleChange}
-                  required
+                  required={!formData.is_free}
+                  disabled={formData.is_free}
                   fullWidth
                   inputProps={{ min: 0, step: 0.01 }}
+                  helperText={formData.is_free ? 'Free products do not require payment' : 'Set the product price'}
                 />
 
                 <TextField

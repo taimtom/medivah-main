@@ -146,9 +146,23 @@ export function ProductDetailView({ productId }) {
 
               <Typography variant="h3">{product.name}</Typography>
 
-              <Typography variant="h4" color="primary.main">
-                {formatPrice(product.price)}
-              </Typography>
+              {product.is_free ? (
+                <Chip
+                  label="FREE"
+                  color="success"
+                  sx={{
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    py: 2,
+                    px: 3,
+                    height: 'auto',
+                  }}
+                />
+              ) : (
+                <Typography variant="h4" color="primary.main">
+                  {formatPrice(product.price)}
+                </Typography>
+              )}
 
               <Divider />
 
@@ -172,12 +186,22 @@ export function ProductDetailView({ productId }) {
                         Instant digital download
                       </Typography>
                     </Stack>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Iconify icon="solar:shield-check-bold-duotone" width={24} color="primary.main" />
-                      <Typography variant="body2">
-                        Secure payment with Paystack
-                      </Typography>
-                    </Stack>
+                    {!product.is_free && (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Iconify icon="solar:shield-check-bold-duotone" width={24} color="primary.main" />
+                        <Typography variant="body2">
+                          Secure payment with Paystack
+                        </Typography>
+                      </Stack>
+                    )}
+                    {product.is_free && (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Iconify icon="solar:gift-bold-duotone" width={24} color="success.main" />
+                        <Typography variant="body2">
+                          Free - Just provide your email to access
+                        </Typography>
+                      </Stack>
+                    )}
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Iconify icon="solar:document-text-bold-duotone" width={24} color="primary.main" />
                       <Typography variant="body2">
@@ -188,16 +212,30 @@ export function ProductDetailView({ productId }) {
                 </CardContent>
               </Card>
 
-              <Button
-                component={RouterLink}
-                href={`${paths.resources.checkout}?product=${product.id}`}
-                variant="contained"
-                size="large"
-                fullWidth
-                startIcon={<Iconify icon="solar:cart-plus-bold-duotone" />}
-              >
-                Purchase Now
-              </Button>
+              {product.is_free ? (
+                <Button
+                  component={RouterLink}
+                  href={`${paths.resources.checkout}?product=${product.id}`}
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  color="success"
+                  startIcon={<Iconify icon="solar:download-bold-duotone" />}
+                >
+                  Get Free Access
+                </Button>
+              ) : (
+                <Button
+                  component={RouterLink}
+                  href={`${paths.resources.checkout}?product=${product.id}`}
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  startIcon={<Iconify icon="solar:cart-plus-bold-duotone" />}
+                >
+                  Purchase Now
+                </Button>
+              )}
 
               <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
                 By purchasing, you agree to our terms and conditions

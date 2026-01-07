@@ -187,7 +187,11 @@ export function ProductListView() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">{formatPrice(product.price)}</Typography>
+                        {product.is_free ? (
+                          <Chip label="FREE" color="success" size="small" />
+                        ) : (
+                          <Typography variant="body2">{formatPrice(product.price)}</Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Chip

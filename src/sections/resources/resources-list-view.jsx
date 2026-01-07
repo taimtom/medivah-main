@@ -174,9 +174,18 @@ export function ResourcesListView() {
                         >
                           {product.description}
                         </Typography>
-                        <Typography variant="h5" color="primary.main">
-                          {formatPrice(product.price)}
-                        </Typography>
+                        {product.is_free ? (
+                          <Chip
+                            label="FREE"
+                            color="success"
+                            size="small"
+                            sx={{ width: 'fit-content' }}
+                          />
+                        ) : (
+                          <Typography variant="h5" color="primary.main">
+                            {formatPrice(product.price)}
+                          </Typography>
+                        )}
                       </Stack>
                     </CardContent>
                   </CardActionArea>
