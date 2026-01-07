@@ -23,7 +23,7 @@ import { CONFIG } from 'src/config-global';
 // ----------------------------------------------------------------------
 
 const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Remote'];
-const EXPERIENCE_LEVELS = ['Entry Level', 'Mid Level', 'Senior Level', 'Executive'];
+const EXPERIENCE_LEVELS = ['Entry Level', '1-3 years', '3-5 years', '5+ years'];
 
 export function JobFormView({ id }) {
   const router = useRouter();
@@ -37,7 +37,9 @@ export function JobFormView({ id }) {
     experience: '',
     description: '',
     requirements: '',
+    apply_method: 'email',
     apply_email: CONFIG.site.contactEmail,
+    apply_link: '',
     published: false,
   });
 
@@ -63,7 +65,9 @@ export function JobFormView({ id }) {
         requirements: Array.isArray(data.requirements)
           ? data.requirements.join('\n')
           : data.requirements || '',
+        apply_method: data.apply_method || 'email',
         apply_email: data.apply_email || CONFIG.site.contactEmail,
+        apply_link: data.apply_link || '',
         published: data.published || false,
       });
     } catch (error) {
@@ -225,15 +229,43 @@ export function JobFormView({ id }) {
                 />
 
                 <TextField
-                  name="apply_email"
-                  label="Application Email"
-                  type="email"
-                  value={formData.apply_email}
+                  name="apply_method"
+                  label="Application Method"
+                  value={formData.apply_method}
                   onChange={handleChange}
+                  select
                   required
                   fullWidth
-                  helperText="Email where applications will be sent"
-                />
+                  helperText="Choose how applicants will apply for this job"
+                >
+                  <MenuItem value="email">Via Email</MenuItem>
+                  <MenuItem value="link">Via Link</MenuItem>
+                </TextField>
+
+                {formData.apply_method === 'email' ? (
+                  <TextField
+                    name="apply_email"
+                    label="Application Email"
+                    type="email"
+                    value={formData.apply_email}
+                    onChange={handleChange}
+                    required
+                    fullWidth
+                    helperText="Email where applications will be sent"
+                  />
+                ) : (
+                  <TextField
+                    name="apply_link"
+                    label="Application Link"
+                    type="url"
+                    value={formData.apply_link}
+                    onChange={handleChange}
+                    required
+                    fullWidth
+                    helperText="URL where applicants will be redirected to apply"
+                    placeholder="https://example.com/apply"
+                  />
+                )}
 
                 <FormControlLabel
                   control={

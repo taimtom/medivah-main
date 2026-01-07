@@ -77,9 +77,13 @@ export function JobsListView() {
   }, [fetchJobs]);
 
   const handleApply = (job) => {
-    const subject = `Application for ${job.title}`;
-    const body = `Hi,\n\nI would like to apply for the ${job.title} position at ${job.company}.\n\nBest regards,`;
-    window.location.href = `mailto:${job.apply_email || CONFIG.site.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (job.apply_method === 'link' && job.apply_link) {
+      window.open(job.apply_link, '_blank', 'noopener,noreferrer');
+    } else {
+      const subject = `Application for ${job.title}`;
+      const body = `Hi,\n\nI would like to apply for the ${job.title} position at ${job.company}.\n\nBest regards,`;
+      window.location.href = `mailto:${job.apply_email || CONFIG.site.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
   };
 
   const toggleExpand = (jobId) => {
@@ -309,7 +313,15 @@ export function JobsListView() {
                               size="large"
                               fullWidth={{ xs: true, md: false }}
                               onClick={() => handleApply(job)}
-                              startIcon={<Iconify icon="solar:letter-bold-duotone" />}
+                              startIcon={
+                                <Iconify
+                                  icon={
+                                    job.apply_method === 'link'
+                                      ? 'solar:link-bold-duotone'
+                                      : 'solar:letter-bold-duotone'
+                                  }
+                                />
+                              }
                             >
                               Apply Now
                             </Button>
@@ -318,7 +330,7 @@ export function JobsListView() {
                               color="text.secondary"
                               sx={{ textAlign: { md: 'right' } }}
                             >
-                              Apply via email
+                              {job.apply_method === 'link' ? 'Apply via link' : 'Apply via email'}
                             </Typography>
                           </Stack>
                         </Grid>
