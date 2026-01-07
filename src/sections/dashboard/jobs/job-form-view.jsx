@@ -16,9 +16,14 @@ import MenuItem from '@mui/material/MenuItem';
 import LoadingButton from '@mui/lab/LoadingButton';
 
 import { Iconify } from 'src/components/iconify';
+import { Editor } from 'src/components/editor';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
 import { CONFIG } from 'src/config-global';
+import Box from '@mui/material/Box';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Paper from '@mui/material/Paper';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +34,8 @@ export function JobFormView({ id }) {
   const router = useRouter();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
+  const [descriptionTab, setDescriptionTab] = useState('edit');
+  const [requirementsTab, setRequirementsTab] = useState('edit');
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -55,6 +62,15 @@ export function JobFormView({ id }) {
       const { data, error } = await supabase.from('jobs').select('*').eq('id', id).single();
 
       if (error) throw error;
+      // Handle requirements - could be array (old format) or HTML string (new format)
+      let requirements = '';
+      if (Array.isArray(data.requirements)) {
+        // Convert old array format to HTML list
+        requirements = `<ul>${data.requirements.map((req) => `<li>${req}</li>`).join('')}</ul>`;
+      } else {
+        requirements = data.requirements || '';
+      }
+
       setFormData({
         title: data.title || '',
         company: data.company || '',
@@ -62,9 +78,7 @@ export function JobFormView({ id }) {
         type: data.type || '',
         experience: data.experience || '',
         description: data.description || '',
-        requirements: Array.isArray(data.requirements)
-          ? data.requirements.join('\n')
-          : data.requirements || '',
+        requirements: requirements,
         apply_method: data.apply_method || 'email',
         apply_email: data.apply_email || CONFIG.site.contactEmail,
         apply_link: data.apply_link || '',
@@ -86,22 +100,23 @@ export function JobFormView({ id }) {
     }));
   };
 
+  const handleDescriptionChange = (value) => {
+    setFormData((prev) => ({ ...prev, description: value }));
+  };
+
+  const handleRequirementsChange = (value) => {
+    setFormData((prev) => ({ ...prev, requirements: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
 
     try {
-      // Convert requirements string to array (split by newlines, filter empty lines)
-      const requirementsArray = formData.requirements
-        ? formData.requirements
-            .split('\n')
-            .map((req) => req.trim())
-            .filter((req) => req.length > 0)
-        : [];
-
+      // Save requirements as HTML text instead of array
       const jobData = {
         ...formData,
-        requirements: requirementsArray,
+        requirements: formData.requirements || '', // Store as HTML string
         updated_at: new Date().toISOString(),
       };
 
@@ -206,27 +221,99 @@ export function JobFormView({ id }) {
                   ))}
                 </TextField>
 
-                <TextField
-                  name="description"
-                  label="Job Description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  multiline
-                  rows={6}
-                  required
-                  fullWidth
-                />
+                {/* Job Description with Rich Text Editor */}
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Job Description *
+                  </Typography>
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                    <Tabs
+                      value={descriptionTab}
+                      onChange={(e, newValue) => setDescriptionTab(newValue)}
+                    >
+                      <Tab
+                        label="Edit"
+                        value="edit"
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        iconPosition="start"
+                      />
+                      <Tab
+                        label="Preview"
+                        value="preview"
+                        icon={<Iconify icon="solar:eye-bold" />}
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                  </Box>
+                  {descriptionTab === 'edit' ? (
+                    <Editor
+                      value={formData.description}
+                      onChange={handleDescriptionChange}
+                      placeholder="Enter the job description here..."
+                    />
+                  ) : (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        minHeight: 200,
+                        bgcolor: 'background.neutral',
+                        '& img': { maxWidth: '100%', height: 'auto' },
+                        '& a': { color: 'primary.main' },
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: formData.description || '<p>No description yet.</p>',
+                      }}
+                    />
+                  )}
+                </Box>
 
-                <TextField
-                  name="requirements"
-                  label="Requirements"
-                  value={formData.requirements}
-                  onChange={handleChange}
-                  multiline
-                  rows={6}
-                  fullWidth
-                  helperText="Enter each requirement on a new line. They will be stored as a list."
-                />
+                {/* Requirements with Rich Text Editor */}
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Requirements
+                  </Typography>
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                    <Tabs
+                      value={requirementsTab}
+                      onChange={(e, newValue) => setRequirementsTab(newValue)}
+                    >
+                      <Tab
+                        label="Edit"
+                        value="edit"
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        iconPosition="start"
+                      />
+                      <Tab
+                        label="Preview"
+                        value="preview"
+                        icon={<Iconify icon="solar:eye-bold" />}
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                  </Box>
+                  {requirementsTab === 'edit' ? (
+                    <Editor
+                      value={formData.requirements}
+                      onChange={handleRequirementsChange}
+                      placeholder="Enter the job requirements here. Format them however you like - use lists, paragraphs, headings, etc."
+                    />
+                  ) : (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        minHeight: 200,
+                        bgcolor: 'background.neutral',
+                        '& img': { maxWidth: '100%', height: 'auto' },
+                        '& a': { color: 'primary.main' },
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: formData.requirements || '<p>No requirements yet.</p>',
+                      }}
+                    />
+                  )}
+                </Box>
 
                 <TextField
                   name="apply_method"

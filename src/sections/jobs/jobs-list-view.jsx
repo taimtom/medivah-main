@@ -222,10 +222,22 @@ export function JobsListView() {
 
                             {job.description && (
                               <Box>
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
+                                <Box
                                   sx={{
+                                    '& p': {
+                                      mb: 1,
+                                    },
+                                    '& ul, & ol': {
+                                      pl: 3,
+                                      mb: 1,
+                                    },
+                                    '& li': {
+                                      mb: 0.5,
+                                    },
+                                    '& h1, & h2, & h3, & h4, & h5, & h6': {
+                                      mt: 2,
+                                      mb: 1,
+                                    },
                                     ...(expandedJobs.has(job.id)
                                       ? {}
                                       : {
@@ -234,13 +246,12 @@ export function JobsListView() {
                                           display: '-webkit-box',
                                           WebkitLineClamp: 3,
                                           WebkitBoxOrient: 'vertical',
+                                          maxHeight: '4.5em',
                                         }),
-                                    whiteSpace: 'pre-wrap',
                                   }}
-                                >
-                                  {job.description}
-                                </Typography>
-                                {job.description.length > 150 && (
+                                  dangerouslySetInnerHTML={{ __html: job.description }}
+                                />
+                                {(job.description && job.description.replace(/<[^>]*>/g, '').length > 150) && (
                                   <Button
                                     size="small"
                                     onClick={() => toggleExpand(job.id)}
@@ -261,29 +272,39 @@ export function JobsListView() {
                               </Box>
                             )}
 
-                            {expandedJobs.has(job.id) &&
-                              job.requirements &&
-                              Array.isArray(job.requirements) &&
-                              job.requirements.length > 0 && (
-                                <Box sx={{ mt: 2 }}>
-                                  <Typography variant="subtitle2" gutterBottom>
-                                    Requirements:
-                                  </Typography>
-                                  <Stack component="ul" spacing={0.5} sx={{ pl: 2, m: 0 }}>
-                                    {job.requirements.map((requirement, index) => (
-                                      <Typography
-                                        key={index}
-                                        component="li"
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{ listStyleType: 'disc' }}
-                                      >
-                                        {requirement}
-                                      </Typography>
-                                    ))}
-                                  </Stack>
-                                </Box>
-                              )}
+                            {expandedJobs.has(job.id) && job.requirements && (
+                              <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  Requirements:
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    '& ul, & ol': {
+                                      pl: 3,
+                                      mb: 2,
+                                    },
+                                    '& li': {
+                                      mb: 1,
+                                    },
+                                    '& p': {
+                                      mb: 1,
+                                    },
+                                    '& h1, & h2, & h3, & h4, & h5, & h6': {
+                                      mt: 2,
+                                      mb: 1,
+                                    },
+                                  }}
+                                  dangerouslySetInnerHTML={{
+                                    __html:
+                                      typeof job.requirements === 'string'
+                                        ? job.requirements
+                                        : Array.isArray(job.requirements)
+                                        ? `<ul>${job.requirements.map((req) => `<li>${req}</li>`).join('')}</ul>`
+                                        : '',
+                                  }}
+                                />
+                              </Box>
+                            )}
 
                             {job.expires_at && (
                               <Typography variant="caption" color="text.disabled">
