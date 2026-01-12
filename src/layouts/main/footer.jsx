@@ -30,7 +30,7 @@ const FOOTER_LINKS = [
     links: [
       { name: 'Blog', path: paths.blog.root },
       { name: 'Products', path: paths.resources.root },
-      { name: 'Jobs', path: paths.jobs },
+      { name: 'Jobs', path: paths.jobs.root },
     ],
   },
   {

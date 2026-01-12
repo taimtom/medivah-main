@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   { title: 'About', path: paths.about },
   { title: 'Blog', path: paths.blog.root },
   { title: 'Resources', path: paths.resources.root },
-  { title: 'Jobs', path: paths.jobs },
+  { title: 'Jobs', path: paths.jobs.root },
   { title: 'Contact', path: paths.contact },
 ];
 

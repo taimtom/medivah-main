@@ -20,7 +20,10 @@ export const paths = {
     product: (id) => `/resources/${id}`,
     checkout: '/resources/checkout',
   },
-  jobs: '/jobs',
+  jobs: {
+    root: '/jobs',
+    detail: (id) => `/jobs/${id}`,
+  },
   contact: '/contact',
   disclosure: '/disclosure',
   privacy: '/privacy',

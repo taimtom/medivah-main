@@ -9,7 +9,6 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import CardActionArea from '@mui/material/CardActionArea';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -17,11 +16,12 @@ import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 
 import { Iconify } from 'src/components/iconify';
 import { CONFIG } from 'src/config-global';
 import { supabase } from 'src/lib/supabase';
+import { RouterLink } from 'src/routes/components';
+import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
@@ -36,7 +36,6 @@ export function JobsListView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedExperience, setSelectedExperience] = useState('All');
-  const [expandedJobs, setExpandedJobs] = useState(new Set());
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -86,17 +85,6 @@ export function JobsListView() {
     }
   };
 
-  const toggleExpand = (jobId) => {
-    setExpandedJobs((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(jobId)) {
-        newSet.delete(jobId);
-      } else {
-        newSet.add(jobId);
-      }
-      return newSet;
-    });
-  };
 
   return (
     <MainLayout>
@@ -238,73 +226,31 @@ export function JobsListView() {
                                       mt: 2,
                                       mb: 1,
                                     },
-                                    ...(expandedJobs.has(job.id)
-                                      ? {}
-                                      : {
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          display: '-webkit-box',
-                                          WebkitLineClamp: 3,
-                                          WebkitBoxOrient: 'vertical',
-                                          maxHeight: '4.5em',
-                                        }),
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    maxHeight: '4.5em',
                                   }}
                                   dangerouslySetInnerHTML={{ __html: job.description }}
                                 />
                                 {(job.description && job.description.replace(/<[^>]*>/g, '').length > 150) && (
                                   <Button
+                                    component={RouterLink}
+                                    href={paths.jobs.detail(job.id)}
                                     size="small"
-                                    onClick={() => toggleExpand(job.id)}
                                     sx={{ mt: 1, textTransform: 'none' }}
                                     startIcon={
-                                      <Iconify
-                                        icon={
-                                          expandedJobs.has(job.id)
-                                            ? 'eva:arrow-up-fill'
-                                            : 'eva:arrow-down-fill'
-                                        }
-                                      />
+                                      <Iconify icon="eva:arrow-right-fill" />
                                     }
                                   >
-                                    {expandedJobs.has(job.id) ? 'Show Less' : 'Read More'}
+                                    Read More
                                   </Button>
                                 )}
                               </Box>
                             )}
 
-                            {expandedJobs.has(job.id) && job.requirements && (
-                              <Box sx={{ mt: 2 }}>
-                                <Typography variant="subtitle2" gutterBottom>
-                                  Requirements:
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    '& ul, & ol': {
-                                      pl: 3,
-                                      mb: 2,
-                                    },
-                                    '& li': {
-                                      mb: 1,
-                                    },
-                                    '& p': {
-                                      mb: 1,
-                                    },
-                                    '& h1, & h2, & h3, & h4, & h5, & h6': {
-                                      mt: 2,
-                                      mb: 1,
-                                    },
-                                  }}
-                                  dangerouslySetInnerHTML={{
-                                    __html:
-                                      typeof job.requirements === 'string'
-                                        ? job.requirements
-                                        : Array.isArray(job.requirements)
-                                        ? `<ul>${job.requirements.map((req) => `<li>${req}</li>`).join('')}</ul>`
-                                        : '',
-                                  }}
-                                />
-                              </Box>
-                            )}
 
                             {job.expires_at && (
                               <Typography variant="caption" color="text.disabled">

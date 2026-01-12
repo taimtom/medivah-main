@@ -56,13 +56,6 @@ export function BlogDisclosureSection() {
             recommend products and services we genuinely believe will add value to our readers.
           </Typography>
 
-          <Typography variant="body2" color="text.secondary">
-            The content on Mavidah is for informational and educational purposes only and should
-            not be considered as professional legal, financial, or HR advice for your specific
-            situation. We recommend consulting with qualified professionals before making important
-            decisions.
-          </Typography>
-
           {/* Read More Link */}
           <Box>
             <Link
@@ -87,4 +80,3 @@ export function BlogDisclosureSection() {
     </Card>
   );
 }
-
