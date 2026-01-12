@@ -112,14 +112,37 @@ export async function POST(request) {
       console.error('Order creation error:', orderError);
     }
 
+    // Generate signed URL for download if file exists
+    let downloadUrl = null;
+    if (product.file_url && product.file_url.startsWith('products/')) {
+      try {
+        // Generate signed URL valid for 7 days
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from('products')
+          .createSignedUrl(product.file_url, 60 * 60 * 24 * 7);
+
+        if (!urlError && signedUrlData) {
+          downloadUrl = signedUrlData.signedUrl;
+        } else {
+          console.error('Error generating signed URL:', urlError);
+        }
+      } catch (urlError) {
+        console.error('Error generating signed URL:', urlError);
+        // Continue even if URL generation fails
+      }
+    } else if (product.file_url) {
+      // Legacy support: if it's already a full URL, use it as-is
+      downloadUrl = product.file_url;
+    }
+
     // Send email with download link
-    if (product.file_url) {
+    if (downloadUrl) {
       const emailResult = await sendOrderConfirmationEmail({
         customerEmail: customer_email,
         customerName: customer_name || 'Valued Customer',
         productName: product.name,
         amount: 0,
-        downloadLink: product.file_url,
+        downloadLink: downloadUrl,
       });
 
       if (!emailResult.success) {
@@ -131,7 +154,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         message: 'Free access granted successfully',
-        download_url: product.file_url || null,
+        download_url: downloadUrl,
       },
       { status: 200 }
     );

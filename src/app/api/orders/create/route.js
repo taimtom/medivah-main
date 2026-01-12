@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendOrderConfirmationEmail } from 'src/lib/email/resend';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -75,6 +76,51 @@ export async function POST(request) {
     } catch (newsletterError) {
       // Don't fail order creation if newsletter subscription fails
       console.error('Newsletter auto-subscribe error:', newsletterError);
+    }
+
+    // Get product details and generate signed URL for download
+    let downloadUrl = null;
+    try {
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('name, file_url')
+        .eq('id', product_id)
+        .single();
+
+      if (!productError && product && product.file_url) {
+        if (product.file_url.startsWith('products/')) {
+          // Generate signed URL valid for 7 days
+          const { data: signedUrlData, error: urlError } = await supabase.storage
+            .from('products')
+            .createSignedUrl(product.file_url, 60 * 60 * 24 * 7);
+
+          if (!urlError && signedUrlData) {
+            downloadUrl = signedUrlData.signedUrl;
+          }
+        } else {
+          // Legacy support: if it's already a full URL, use it as-is
+          downloadUrl = product.file_url;
+        }
+      }
+
+      // Send order confirmation email with download link
+      if (product && downloadUrl) {
+        const emailResult = await sendOrderConfirmationEmail({
+          customerEmail: customer_email,
+          customerName: customer_email.split('@')[0], // Use email username as fallback
+          productName: product.name,
+          amount: amount,
+          downloadLink: downloadUrl,
+        });
+
+        if (!emailResult.success) {
+          console.error('Email sending error:', emailResult.error);
+          // Don't fail order creation if email fails
+        }
+      }
+    } catch (downloadError) {
+      // Don't fail order creation if download URL generation fails
+      console.error('Download URL generation error:', downloadError);
     }
 
     return NextResponse.json(

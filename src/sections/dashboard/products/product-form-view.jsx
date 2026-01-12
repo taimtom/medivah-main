@@ -18,7 +18,10 @@ import Box from '@mui/material/Box';
 
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
+import { uploadFile } from 'src/lib/supabase/client';
 import { paths } from 'src/routes/paths';
+import LinearProgress from '@mui/material/LinearProgress';
+import Alert from '@mui/material/Alert';
 
 // ----------------------------------------------------------------------
 
@@ -33,6 +36,10 @@ export function ProductFormView({ id }) {
   const router = useRouter();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -97,6 +104,48 @@ export function ProductFormView({ id }) {
     // If free is checked, set price to 0
     if (name === 'is_free' && checked) {
       setFormData((prev) => ({ ...prev, price: '0' }));
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+    setUploadingFile(true);
+    setUploadProgress(0);
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      // Upload to Supabase Storage (private bucket)
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      // Store the file path (not a URL, since we'll generate signed URLs on-demand)
+      // Format: "products/filename.ext"
+      setFormData((prev) => ({ ...prev, file_url: filePath }));
+      setUploadedFileName(file.name);
+      setUploadProgress(100);
+      
+      // Reset progress after a moment
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setUploadError(error.message || 'Failed to upload file. Please try again or use manual path entry.');
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -256,14 +305,81 @@ export function ProductFormView({ id }) {
                   helperText="URL of the product image"
                 />
 
-                <TextField
-                  name="file_url"
-                  label="Download File URL"
-                  value={formData.file_url}
-                  onChange={handleChange}
-                  fullWidth
-                  helperText="URL of the digital product file"
-                />
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Download File (Private Storage)
+                  </Typography>
+                  <Stack spacing={2}>
+                    <Box>
+                      <input
+                        accept="*/*"
+                        style={{ display: 'none' }}
+                        id="file-upload"
+                        type="file"
+                        onChange={handleFileUpload}
+                        disabled={uploadingFile}
+                      />
+                      <label htmlFor="file-upload">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<Iconify icon="solar:upload-bold-duotone" />}
+                          disabled={uploadingFile}
+                          fullWidth
+                        >
+                          {uploadingFile ? 'Uploading to Supabase Storage...' : 'Upload File to Private Storage'}
+                        </Button>
+                      </label>
+                    </Box>
+
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <LinearProgress variant="determinate" value={uploadProgress} />
+                    )}
+
+                    {uploadError && (
+                      <Alert severity="error" onClose={() => setUploadError(null)}>
+                        {uploadError}
+                      </Alert>
+                    )}
+
+                    {uploadedFileName && (
+                      <Alert severity="success">
+                        File "{uploadedFileName}" uploaded successfully! The file path is stored securely.
+                      </Alert>
+                    )}
+
+                    <TextField
+                      name="file_url"
+                      label="File Path"
+                      value={formData.file_url}
+                      onChange={handleChange}
+                      fullWidth
+                      helperText="Storage path (e.g., products/filename.zip). Upload a file above, or manually enter the path if file is already uploaded."
+                      InputProps={{
+                        endAdornment: formData.file_url && formData.file_url.startsWith('products/') ? (
+                          <Button
+                            size="small"
+                            onClick={async () => {
+                              try {
+                                // Generate a temporary signed URL for testing
+                                const { data, error } = await supabase.storage
+                                  .from('products')
+                                  .createSignedUrl(formData.file_url, 60); // 60 seconds
+                                if (error) throw error;
+                                window.open(data.signedUrl, '_blank', 'noopener noreferrer');
+                              } catch (err) {
+                                alert('Error generating download link: ' + err.message);
+                              }
+                            }}
+                            startIcon={<Iconify icon="solar:link-bold-duotone" />}
+                          >
+                            Test
+                          </Button>
+                        ) : null,
+                      }}
+                    />
+                  </Stack>
+                </Box>
 
                 <FormControlLabel
                   control={

@@ -176,8 +176,14 @@ export function JobDetailView({ jobId }) {
                     </Typography>
                     <Box
                       sx={{
+                        '& h1, & h2, & h3, & h4, & h5, & h6': {
+                          mt: 3,
+                          mb: 2,
+                          fontWeight: 600,
+                        },
                         '& p': {
                           mb: 2,
+                          lineHeight: 1.8,
                         },
                         '& ul, & ol': {
                           pl: 3,
@@ -186,9 +192,68 @@ export function JobDetailView({ jobId }) {
                         '& li': {
                           mb: 1,
                         },
-                        '& h1, & h2, & h3, & h4, & h5, & h6': {
-                          mt: 3,
-                          mb: 2,
+                        '& img': {
+                          maxWidth: '100%',
+                          height: 'auto',
+                          borderRadius: 1,
+                          my: 3,
+                        },
+                        '& a': {
+                          color: 'primary.main',
+                          textDecoration: 'underline',
+                          '&:hover': {
+                            textDecoration: 'none',
+                          },
+                        },
+                        '& blockquote': {
+                          borderLeft: 4,
+                          borderColor: 'primary.main',
+                          pl: 2,
+                          py: 1,
+                          my: 2,
+                          fontStyle: 'italic',
+                          bgcolor: 'background.neutral',
+                          borderRadius: 1,
+                        },
+                        '& pre': {
+                          p: 2,
+                          borderRadius: 1,
+                          bgcolor: 'grey.900',
+                          color: 'common.white',
+                          overflow: 'auto',
+                          my: 2,
+                        },
+                        '& code': {
+                          px: 0.5,
+                          py: 0.25,
+                          borderRadius: 0.5,
+                          bgcolor: 'grey.200',
+                          fontFamily: 'monospace',
+                          fontSize: '0.9em',
+                        },
+                        '& pre code': {
+                          bgcolor: 'transparent',
+                          color: 'inherit',
+                        },
+                        '& table': {
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          my: 2,
+                          '& th, & td': {
+                            border: 1,
+                            borderColor: 'divider',
+                            p: 1,
+                          },
+                          '& th': {
+                            bgcolor: 'background.neutral',
+                            fontWeight: 600,
+                          },
+                        },
+                        '& strong': {
+                          fontWeight: 600,
+                        },
+                        '& em': {
+                          fontStyle: 'italic',
                         },
                       }}
                       dangerouslySetInnerHTML={{ __html: job.description }}
@@ -206,6 +271,15 @@ export function JobDetailView({ jobId }) {
                       </Typography>
                       <Box
                         sx={{
+                          '& h1, & h2, & h3, & h4, & h5, & h6': {
+                            mt: 3,
+                            mb: 2,
+                            fontWeight: 600,
+                          },
+                          '& p': {
+                            mb: 2,
+                            lineHeight: 1.8,
+                          },
                           '& ul, & ol': {
                             pl: 3,
                             mb: 2,
@@ -213,12 +287,68 @@ export function JobDetailView({ jobId }) {
                           '& li': {
                             mb: 1.5,
                           },
-                          '& p': {
-                            mb: 2,
+                          '& img': {
+                            maxWidth: '100%',
+                            height: 'auto',
+                            borderRadius: 1,
+                            my: 3,
                           },
-                          '& h1, & h2, & h3, & h4, & h5, & h6': {
-                            mt: 3,
-                            mb: 2,
+                          '& a': {
+                            color: 'primary.main',
+                            textDecoration: 'underline',
+                            '&:hover': {
+                              textDecoration: 'none',
+                            },
+                          },
+                          '& blockquote': {
+                            borderLeft: 4,
+                            borderColor: 'primary.main',
+                            pl: 2,
+                            py: 1,
+                            my: 2,
+                            fontStyle: 'italic',
+                            bgcolor: 'background.neutral',
+                            borderRadius: 1,
+                          },
+                          '& pre': {
+                            p: 2,
+                            borderRadius: 1,
+                            bgcolor: 'grey.900',
+                            color: 'common.white',
+                            overflow: 'auto',
+                            my: 2,
+                          },
+                          '& code': {
+                            px: 0.5,
+                            py: 0.25,
+                            borderRadius: 0.5,
+                            bgcolor: 'grey.200',
+                            fontFamily: 'monospace',
+                            fontSize: '0.9em',
+                          },
+                          '& pre code': {
+                            bgcolor: 'transparent',
+                            color: 'inherit',
+                          },
+                          '& table': {
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                            my: 2,
+                            '& th, & td': {
+                              border: 1,
+                              borderColor: 'divider',
+                              p: 1,
+                            },
+                            '& th': {
+                              bgcolor: 'background.neutral',
+                              fontWeight: 600,
+                            },
+                          },
+                          '& strong': {
+                            fontWeight: 600,
+                          },
+                          '& em': {
+                            fontStyle: 'italic',
                           },
                         }}
                         dangerouslySetInnerHTML={{

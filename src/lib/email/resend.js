@@ -2,14 +2,32 @@ import { Resend } from 'resend';
 
 // ----------------------------------------------------------------------
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend client when needed
+let resend = null;
+
+function getResend() {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn('RESEND_API_KEY is not set. Email functionality will be disabled.');
+      return null;
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 /**
  * Send contact form email
  */
 export async function sendContactEmail({ name, email, subject, message }) {
+  const client = getResend();
+  if (!client) {
+    return { success: false, error: 'Email service not configured (RESEND_API_KEY missing)' };
+  }
+
   try {
-    const data = await resend.emails.send({
+    const data = await client.emails.send({
       from: 'Mavidah Contact <onboarding@resend.dev>', // Change this to your verified domain
       to: [process.env.CONTACT_EMAIL || 'contact@mavidah.com'],
       replyTo: email,
@@ -55,8 +73,13 @@ export async function sendOrderConfirmationEmail({
   amount,
   downloadLink,
 }) {
+  const client = getResend();
+  if (!client) {
+    return { success: false, error: 'Email service not configured (RESEND_API_KEY missing)' };
+  }
+
   try {
-    const data = await resend.emails.send({
+    const data = await client.emails.send({
       from: 'Mavidah <onboarding@resend.dev>', // Change this to your verified domain
       to: [customerEmail],
       subject: `Order Confirmation - ${productName}`,
@@ -185,7 +208,12 @@ export async function sendNewsletterEmail({
       </html>
     `;
 
-    const data = await resend.emails.send({
+    const client = getResend();
+    if (!client) {
+      return { success: false, error: 'Email service not configured (RESEND_API_KEY missing)' };
+    }
+
+    const data = await client.emails.send({
       from: 'Mavidah <onboarding@resend.dev>', // Change this to your verified domain
       to: [to],
       subject,

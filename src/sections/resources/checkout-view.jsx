@@ -102,7 +102,20 @@ export function CheckoutView() {
         const data = await response.json();
 
         if (response.ok) {
-          alert('Success! Check your email for the download link.');
+          if (data.download_url) {
+            // Show download URL if available (in case email failed)
+            const shouldShowLink = window.confirm(
+              'Success! Your download link is ready.\n\n' +
+              'Click OK to download now, or Cancel to check your email.\n\n' +
+              'Note: The download link is also available in your email if email service is configured.'
+            );
+            
+            if (shouldShowLink) {
+              window.open(data.download_url, '_blank', 'noopener,noreferrer');
+            }
+          } else {
+            alert('Success! Check your email for the download link.');
+          }
           router.push('/resources');
         } else {
           alert(data.error || 'Failed to process free access. Please try again.');
