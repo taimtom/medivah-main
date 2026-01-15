@@ -84,18 +84,6 @@ export function Header() {
               </Box>
             )}
 
-            {/* Desktop Auth Button */}
-            {!isMobile && (
-              <Button
-                component={RouterLink}
-                href={paths.auth.supabase.signIn}
-                variant="contained"
-                startIcon={<Iconify icon="solar:login-3-bold-duotone" />}
-              >
-                Sign In
-              </Button>
-            )}
-
             {/* Mobile Menu Button */}
             {isMobile && (
               <>
@@ -153,19 +141,6 @@ export function Header() {
               </ListItem>
             ))}
           </List>
-
-          <Box sx={{ mt: 3 }}>
-            <Button
-              component={RouterLink}
-              href={paths.auth.supabase.signIn}
-              variant="contained"
-              fullWidth
-              startIcon={<Iconify icon="solar:login-3-bold-duotone" />}
-              onClick={handleDrawerToggle}
-            >
-              Sign In
-            </Button>
-          </Box>
         </Box>
       </Drawer>
     </>
