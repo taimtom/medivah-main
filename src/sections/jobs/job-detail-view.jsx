@@ -31,6 +31,13 @@ export function JobDetailView({ jobId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
+  // Update document title when job is loaded
+  useEffect(() => {
+    if (job && job.title) {
+      document.title = `${job.title} - ${CONFIG.site.name}`;
+    }
+  }, [job]);
+
   const fetchJob = async () => {
     try {
       const { data, error } = await supabase

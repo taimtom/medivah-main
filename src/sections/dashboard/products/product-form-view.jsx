@@ -18,7 +18,7 @@ import Box from '@mui/material/Box';
 
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
-import { uploadFile } from 'src/lib/supabase/client';
+import { uploadFile, getPublicUrl } from 'src/lib/supabase/client';
 import { paths } from 'src/routes/paths';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
@@ -40,6 +40,10 @@ export function ProductFormView({ id }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState(null);
+  const [uploadedImageName, setUploadedImageName] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -104,6 +108,62 @@ export function ProductFormView({ id }) {
     // If free is checked, set price to 0
     if (name === 'is_free' && checked) {
       setFormData((prev) => ({ ...prev, price: '0' }));
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate image file type
+    if (!file.type.startsWith('image/')) {
+      setImageUploadError('Please select a valid image file (JPG, PNG, GIF, etc.)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setImageUploadError('Image size must be less than 5MB');
+      return;
+    }
+
+    setImageUploadError(null);
+    setUploadingImage(true);
+    setImageUploadProgress(0);
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const imagePath = `products/${fileName}`;
+
+      // Upload to Supabase Storage (public bucket for product images)
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(imagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      // Get public URL for the image
+      const publicUrl = getPublicUrl('product-images', imagePath);
+
+      // Store the public URL
+      setFormData((prev) => ({ ...prev, image_url: publicUrl }));
+      setUploadedImageName(file.name);
+      setImageUploadProgress(100);
+      
+      // Reset progress after a moment
+      setTimeout(() => {
+        setImageUploadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setImageUploadError(error.message || 'Failed to upload image. Please try again or use manual URL entry.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -296,14 +356,100 @@ export function ProductFormView({ id }) {
                   ))}
                 </TextField>
 
-                <TextField
-                  name="image_url"
-                  label="Product Image URL"
-                  value={formData.image_url}
-                  onChange={handleChange}
-                  fullWidth
-                  helperText="URL of the product image"
-                />
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Product Image
+                  </Typography>
+                  <Stack spacing={2}>
+                    <Box>
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="image-upload"
+                        type="file"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                      />
+                      <label htmlFor="image-upload">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<Iconify icon="solar:gallery-upload-bold-duotone" />}
+                          disabled={uploadingImage}
+                          fullWidth
+                        >
+                          {uploadingImage ? 'Uploading Image...' : 'Upload Image to Storage'}
+                        </Button>
+                      </label>
+                    </Box>
+
+                    {imageUploadProgress > 0 && imageUploadProgress < 100 && (
+                      <LinearProgress variant="determinate" value={imageUploadProgress} />
+                    )}
+
+                    {imageUploadError && (
+                      <Alert severity="error" onClose={() => setImageUploadError(null)}>
+                        {imageUploadError}
+                      </Alert>
+                    )}
+
+                    {uploadedImageName && (
+                      <Alert severity="success">
+                        Image "{uploadedImageName}" uploaded successfully! You can also manually edit the URL below if needed.
+                      </Alert>
+                    )}
+
+                    {formData.image_url && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          mb: 1,
+                          display: 'flex',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={formData.image_url}
+                          alt="Product preview"
+                          sx={{
+                            maxWidth: '100%',
+                            maxHeight: 200,
+                            borderRadius: 1,
+                            border: 1,
+                            borderColor: 'divider',
+                            objectFit: 'contain',
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </Box>
+                    )}
+
+                    <TextField
+                      name="image_url"
+                      label="Product Image URL"
+                      value={formData.image_url}
+                      onChange={handleChange}
+                      fullWidth
+                      helperText="Upload an image above, or manually enter the URL of the product image"
+                      InputProps={{
+                        endAdornment: formData.image_url ? (
+                          <Button
+                            size="small"
+                            href={formData.image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            startIcon={<Iconify icon="solar:link-bold-duotone" />}
+                          >
+                            View
+                          </Button>
+                        ) : null,
+                      }}
+                    />
+                  </Stack>
+                </Box>
 
                 <Box>
                   <Typography variant="subtitle2" gutterBottom>

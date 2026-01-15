@@ -22,6 +22,7 @@ import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { MainLayout } from 'src/layouts/main';
+import { CONFIG } from 'src/config-global';
 import { BlogDisclosureSection } from 'src/sections/disclosure';
 import { NewsletterSubscribeForm } from 'src/components/newsletter/newsletter-subscribe-form';
 import {
@@ -67,6 +68,13 @@ export function BlogPostView({ slug }) {
     setIsUnlocked(unlocked);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // Update document title when blog is loaded
+  useEffect(() => {
+    if (blog && blog.title) {
+      document.title = `${blog.title} - ${CONFIG.site.name}`;
+    }
+  }, [blog]);
 
   // Truncate content on client-side when paywall is enabled
   useEffect(() => {

@@ -20,6 +20,7 @@ import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
+import { CONFIG } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 
@@ -32,6 +33,13 @@ export function ProductDetailView({ productId }) {
     fetchProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
+
+  // Update document title when product is loaded
+  useEffect(() => {
+    if (product && product.name) {
+      document.title = `${product.name} - ${CONFIG.site.name}`;
+    }
+  }, [product]);
 
   const fetchProduct = async () => {
     try {
