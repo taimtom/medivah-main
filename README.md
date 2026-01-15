@@ -84,6 +84,9 @@ CONTACT_EMAIL=contact@mavidah.co
 # Google Analytics (Get from https://analytics.google.com)
 NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 
+# Site URL (For Open Graph meta tags and social sharing)
+NEXT_PUBLIC_SITE_URL=https://www.mavidah.com
+
 # JWT (Generate a random string)
 AUTH_SECRET=your-random-secret-key-here
 ```
