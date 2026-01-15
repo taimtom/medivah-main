@@ -33,7 +33,7 @@ export async function generateMetadata({ params }) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
     
     // Ensure image URL is absolute
-    let image = product.image_url || `${siteUrl}/logo/mavidah-logo.svg`;
+    let image = product.image_url || `${siteUrl}/logo/mavidah-logo.png`;
     if (image && !image.startsWith('http')) {
       image = image.startsWith('/') ? `${siteUrl}${image}` : `${siteUrl}/${image}`;
     }
