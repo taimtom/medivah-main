@@ -29,8 +29,11 @@ export async function generateMetadata({ params }) {
     const description = blog.excerpt || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
     
+    // Use featured image if available, otherwise use default Open Graph image
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+    
     // Ensure image URL is absolute
-    let image = blog.featured_image || `${siteUrl}/logo/mavidah-logo.png`;
+    let image = blog.featured_image || defaultOgImage;
     if (image && !image.startsWith('http')) {
       image = image.startsWith('/') ? `${siteUrl}${image}` : `${siteUrl}/${image}`;
     }

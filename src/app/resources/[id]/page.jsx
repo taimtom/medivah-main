@@ -32,8 +32,11 @@ export async function generateMetadata({ params }) {
       : `Get ${product.name} - ${product.category} resource from ${CONFIG.site.name}. ${priceText}.`;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
     
+    // Use product image if available, otherwise use default Open Graph image
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+    
     // Ensure image URL is absolute
-    let image = product.image_url || `${siteUrl}/logo/mavidah-logo.png`;
+    let image = product.image_url || defaultOgImage;
     if (image && !image.startsWith('http')) {
       image = image.startsWith('/') ? `${siteUrl}${image}` : `${siteUrl}/${image}`;
     }

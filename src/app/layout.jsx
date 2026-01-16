@@ -18,6 +18,10 @@ import { AuthProvider as SupabaseAuthProvider } from 'src/auth/context/supabase'
 
 // ----------------------------------------------------------------------
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+// Default Open Graph image for social sharing
+const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+
 export const metadata = {
   title: {
     default: 'Mavidah - HR Knowledge Hub',
@@ -36,20 +40,20 @@ export const metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mavidah.com',
+    url: siteUrl,
     siteName: CONFIG.site.name,
     images: [
       {
-        url: '/logo/mavidah-logo.png',
+        url: defaultOgImage,
         width: 1200,
         height: 630,
-        alt: 'Mavidah Logo',
+        alt: 'Mavidah - HR Knowledge Hub',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    images: ['/logo/mavidah-logo.png'],
+    images: [defaultOgImage],
   },
 };
 

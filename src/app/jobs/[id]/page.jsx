@@ -30,7 +30,7 @@ export async function generateMetadata({ params }) {
       ? `${job.description.substring(0, 155)}...` 
       : `Apply for ${job.title}${job.location ? ` in ${job.location}` : ''} at ${CONFIG.site.name}.`;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
-    const image = `${siteUrl}/logo/mavidah-logo.png`;
+    const image = `${siteUrl}/logo/og-image.jpeg`;
 
     return {
       title,
