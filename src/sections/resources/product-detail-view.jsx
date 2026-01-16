@@ -21,6 +21,7 @@ import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { CONFIG } from 'src/config-global';
+import { ShareButtons } from 'src/components/share-buttons';
 
 // ----------------------------------------------------------------------
 
@@ -152,7 +153,24 @@ export function ProductDetailView({ productId }) {
                 />
               )}
 
-              <Typography variant="h3">{product.name}</Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" spacing={2}>
+                <Typography variant="h3" sx={{ flex: 1, minWidth: { xs: '100%', sm: 'auto' } }}>
+                  {product.name}
+                </Typography>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                  <ShareButtons 
+                    title={`${product.name}${product.is_free ? ' - Free' : ` - ${formatPrice(product.price)}`} | ${CONFIG.site.name}`}
+                    description={product.description ? product.description.substring(0, 155) : `Get ${product.name} from ${CONFIG.site.name}`}
+                  />
+                </Box>
+              </Stack>
+
+              <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 2 }}>
+                <ShareButtons 
+                  title={`${product.name}${product.is_free ? ' - Free' : ` - ${formatPrice(product.price)}`} | ${CONFIG.site.name}`}
+                  description={product.description ? product.description.substring(0, 155) : `Get ${product.name} from ${CONFIG.site.name}`}
+                />
+              </Box>
 
               {product.is_free ? (
                 <Chip

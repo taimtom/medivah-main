@@ -18,10 +18,29 @@ export async function generateMetadata({ params }) {
       .eq('published', true)
       .single();
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+
     if (!product) {
       return {
         title: `Product Details - ${CONFIG.site.name}`,
         description: 'Discover valuable HR resources and digital products at Mavidah.',
+        openGraph: {
+          title: `Product Details - ${CONFIG.site.name}`,
+          description: 'Discover valuable HR resources and digital products at Mavidah.',
+          images: [
+            {
+              url: defaultOgImage,
+              width: 1200,
+              height: 630,
+              alt: 'Mavidah - HR Knowledge Hub',
+            },
+          ],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          images: [defaultOgImage],
+        },
       };
     }
 
@@ -30,16 +49,9 @@ export async function generateMetadata({ params }) {
     const description = product.description 
       ? `${product.description.substring(0, 155)}...` 
       : `Get ${product.name} - ${product.category} resource from ${CONFIG.site.name}. ${priceText}.`;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
     
-    // Use product image if available, otherwise use default Open Graph image
-    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
-    
-    // Ensure image URL is absolute
-    let image = product.image_url || defaultOgImage;
-    if (image && !image.startsWith('http')) {
-      image = image.startsWith('/') ? `${siteUrl}${image}` : `${siteUrl}/${image}`;
-    }
+    // Always use the default Open Graph image for consistent social sharing
+    const image = defaultOgImage;
 
     return {
       title,
@@ -69,9 +81,27 @@ export async function generateMetadata({ params }) {
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
     return {
       title: `Product Details - ${CONFIG.site.name}`,
       description: 'Discover valuable HR resources and digital products at Mavidah.',
+      openGraph: {
+        title: `Product Details - ${CONFIG.site.name}`,
+        description: 'Discover valuable HR resources and digital products at Mavidah.',
+        images: [
+          {
+            url: defaultOgImage,
+            width: 1200,
+            height: 630,
+            alt: 'Mavidah - HR Knowledge Hub',
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        images: [defaultOgImage],
+      },
     };
   }
 }

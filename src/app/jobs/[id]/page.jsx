@@ -18,10 +18,29 @@ export async function generateMetadata({ params }) {
       .eq('published', true)
       .single();
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+
     if (!job) {
       return {
         title: `Job Details - ${CONFIG.site.name}`,
         description: 'Find the best HR and career opportunities at Mavidah.',
+        openGraph: {
+          title: `Job Details - ${CONFIG.site.name}`,
+          description: 'Find the best HR and career opportunities at Mavidah.',
+          images: [
+            {
+              url: defaultOgImage,
+              width: 1200,
+              height: 630,
+              alt: 'Mavidah - HR Knowledge Hub',
+            },
+          ],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          images: [defaultOgImage],
+        },
       };
     }
 
@@ -29,8 +48,7 @@ export async function generateMetadata({ params }) {
     const description = job.description 
       ? `${job.description.substring(0, 155)}...` 
       : `Apply for ${job.title}${job.location ? ` in ${job.location}` : ''} at ${CONFIG.site.name}.`;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
-    const image = `${siteUrl}/logo/og-image.jpeg`;
+    const image = defaultOgImage;
 
     return {
       title,
@@ -60,9 +78,27 @@ export async function generateMetadata({ params }) {
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
     return {
       title: `Job Details - ${CONFIG.site.name}`,
       description: 'Find the best HR and career opportunities at Mavidah.',
+      openGraph: {
+        title: `Job Details - ${CONFIG.site.name}`,
+        description: 'Find the best HR and career opportunities at Mavidah.',
+        images: [
+          {
+            url: defaultOgImage,
+            width: 1200,
+            height: 630,
+            alt: 'Mavidah - HR Knowledge Hub',
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        images: [defaultOgImage],
+      },
     };
   }
 }

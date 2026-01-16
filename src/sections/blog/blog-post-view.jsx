@@ -25,6 +25,7 @@ import { MainLayout } from 'src/layouts/main';
 import { CONFIG } from 'src/config-global';
 import { BlogDisclosureSection } from 'src/sections/disclosure';
 import { NewsletterSubscribeForm } from 'src/components/newsletter/newsletter-subscribe-form';
+import { ShareButtons } from 'src/components/share-buttons';
 import {
   toggleBlogLike,
   getBlogLikeStats,
@@ -301,7 +302,24 @@ export function BlogPostView({ slug }) {
               />
             )}
 
-            <Typography variant="h2">{blog.title}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" spacing={2}>
+              <Typography variant="h2" sx={{ flex: 1, minWidth: { xs: '100%', sm: 'auto' } }}>
+                {blog.title}
+              </Typography>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <ShareButtons 
+                  title={`${blog.title} | ${CONFIG.site.name}`}
+                  description={blog.excerpt || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.'}
+                />
+              </Box>
+            </Stack>
+
+            <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 2 }}>
+              <ShareButtons 
+                title={`${blog.title} | ${CONFIG.site.name}`}
+                description={blog.excerpt || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.'}
+              />
+            </Box>
 
             {blog.excerpt && (
               <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 400 }}>

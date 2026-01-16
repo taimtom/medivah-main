@@ -19,6 +19,7 @@ import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { CONFIG } from 'src/config-global';
 import { supabase } from 'src/lib/supabase';
+import { ShareButtons } from 'src/components/share-buttons';
 
 // ----------------------------------------------------------------------
 
@@ -133,7 +134,24 @@ export function JobDetailView({ jobId }) {
                     )}
                   </Stack>
 
-                  <Typography variant="h3">{job.title}</Typography>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" spacing={2}>
+                    <Typography variant="h3" sx={{ flex: 1, minWidth: { xs: '100%', sm: 'auto' } }}>
+                      {job.title}
+                    </Typography>
+                    <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                      <ShareButtons 
+                        title={`${job.title}${job.company ? ` at ${job.company}` : ''} | ${CONFIG.site.name}`}
+                        description={job.description ? job.description.substring(0, 155) : `Apply for ${job.title} at ${CONFIG.site.name}`}
+                      />
+                    </Box>
+                  </Stack>
+
+                  <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 2 }}>
+                    <ShareButtons 
+                      title={`${job.title}${job.company ? ` at ${job.company}` : ''} | ${CONFIG.site.name}`}
+                      description={job.description ? job.description.substring(0, 155) : `Apply for ${job.title} at ${CONFIG.site.name}`}
+                    />
+                  </Box>
 
                   <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap>
                     {job.company && (

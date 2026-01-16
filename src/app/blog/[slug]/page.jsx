@@ -18,25 +18,37 @@ export async function generateMetadata({ params }) {
       .eq('published', true)
       .single();
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
+
     if (!blog) {
       return {
         title: `Blog Post - ${CONFIG.site.name}`,
         description: CONFIG.site.description || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.',
+        openGraph: {
+          title: `Blog Post - ${CONFIG.site.name}`,
+          description: CONFIG.site.description || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.',
+          images: [
+            {
+              url: defaultOgImage,
+              width: 1200,
+              height: 630,
+              alt: 'Mavidah - HR Knowledge Hub',
+            },
+          ],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          images: [defaultOgImage],
+        },
       };
     }
 
     const title = `${blog.title} | ${CONFIG.site.name}`;
     const description = blog.excerpt || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.';
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
     
-    // Use featured image if available, otherwise use default Open Graph image
-    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
-    
-    // Ensure image URL is absolute
-    let image = blog.featured_image || defaultOgImage;
-    if (image && !image.startsWith('http')) {
-      image = image.startsWith('/') ? `${siteUrl}${image}` : `${siteUrl}/${image}`;
-    }
+    // Always use the default Open Graph image for consistent social sharing
+    const image = defaultOgImage;
 
     return {
       title,
@@ -66,9 +78,27 @@ export async function generateMetadata({ params }) {
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+    const defaultOgImage = `${siteUrl}/logo/og-image.jpeg`;
     return {
       title: `Blog Post - ${CONFIG.site.name}`,
       description: 'Your trusted hub for HR knowledge, career guidance, and workplace insights.',
+      openGraph: {
+        title: `Blog Post - ${CONFIG.site.name}`,
+        description: 'Your trusted hub for HR knowledge, career guidance, and workplace insights.',
+        images: [
+          {
+            url: defaultOgImage,
+            width: 1200,
+            height: 630,
+            alt: 'Mavidah - HR Knowledge Hub',
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        images: [defaultOgImage],
+      },
     };
   }
 }

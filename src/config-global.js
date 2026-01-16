@@ -31,3 +31,9 @@ export const CONFIG = {
     key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
   },
 };
+
+// Helper function to get default Open Graph image URL for social sharing
+export const getDefaultOgImage = () => {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+  return `${siteUrl}/logo/og-image.jpeg`;
+};
