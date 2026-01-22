@@ -15,6 +15,10 @@ import TextField from '@mui/material/TextField';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Alert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import { alpha, useTheme } from '@mui/material/styles';
 
 import { RouterLink } from 'src/routes/components';
@@ -43,6 +47,11 @@ export function BlogPostView({ slug }) {
   // Likes/Dislikes state
   const [likeStats, setLikeStats] = useState({ likesCount: 0, dislikesCount: 0, userReaction: null });
   const [likesLoading, setLikesLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailDialogLoading, setEmailDialogLoading] = useState(false);
+  const [pendingLikeAction, setPendingLikeAction] = useState(null); // Store the pending like action (true/false)
   
   // Comments state
   const [comments, setComments] = useState([]);
@@ -67,6 +76,14 @@ export function BlogPostView({ slug }) {
     const unlockedKey = `blog_unlocked_${slug}`;
     const unlocked = typeof window !== 'undefined' && localStorage.getItem(unlockedKey) === 'true';
     setIsUnlocked(unlocked);
+    
+    // Load email from localStorage
+    if (typeof window !== 'undefined') {
+      const storedEmail = localStorage.getItem('mavidah_user_email');
+      if (storedEmail) {
+        setUserEmail(storedEmail);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
@@ -154,7 +171,8 @@ export function BlogPostView({ slug }) {
   };
 
   const fetchLikeStats = async (blogId) => {
-    const stats = await getBlogLikeStats(blogId);
+    const email = typeof window !== 'undefined' ? localStorage.getItem('mavidah_user_email') : null;
+    const stats = await getBlogLikeStats(blogId, email);
     setLikeStats(stats);
   };
 
@@ -165,11 +183,94 @@ export function BlogPostView({ slug }) {
     setCommentsLoading(false);
   };
 
+  const subscribeToNewsletter = async (email) => {
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'like' }),
+      });
+      
+      if (!response.ok) {
+        console.error('Newsletter subscription failed');
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+    }
+  };
+
+  const handleEmailSubmit = async () => {
+    if (!emailInput.trim()) {
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setEmailDialogLoading(true);
+    
+    try {
+      const email = emailInput.toLowerCase();
+      
+      // Save email to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mavidah_user_email', email);
+        setUserEmail(email);
+      }
+
+      // Subscribe to newsletter
+      await subscribeToNewsletter(email);
+
+      setEmailDialogOpen(false);
+      setEmailInput('');
+      setEmailDialogLoading(false);
+
+      // If there was a pending like action, execute it now
+      if (pendingLikeAction !== null && blog) {
+        setPendingLikeAction(null);
+        setLikesLoading(true);
+        const result = await toggleBlogLike(blog.id, pendingLikeAction, email);
+        
+        if (result.success) {
+          await fetchLikeStats(blog.id);
+        } else {
+          alert(result.error || 'Failed to update reaction');
+        }
+        
+        setLikesLoading(false);
+      }
+    } catch (error) {
+      console.error('Error saving email:', error);
+      setEmailDialogLoading(false);
+    }
+  };
+
   const handleLike = async (isLike) => {
     if (!blog) return;
     
+    // Check if we have email (from localStorage or user)
+    let email = userEmail;
+    
+    if (!email && typeof window !== 'undefined') {
+      email = localStorage.getItem('mavidah_user_email');
+      if (email) {
+        setUserEmail(email);
+      }
+    }
+
+    // If no email, show dialog and store the pending action
+    if (!email) {
+      setPendingLikeAction(isLike);
+      setEmailDialogOpen(true);
+      return;
+    }
+    
     setLikesLoading(true);
-    const result = await toggleBlogLike(blog.id, isLike);
+    const result = await toggleBlogLike(blog.id, isLike, email);
     
     if (result.success) {
       // Refresh like stats
@@ -505,6 +606,51 @@ export function BlogPostView({ slug }) {
             </Stack>
           </CardContent>
         </Card>
+
+        {/* Email Dialog for Likes */}
+        <Dialog 
+          open={emailDialogOpen} 
+          onClose={() => setEmailDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Enter Your Email</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Please enter your email to like this post. We'll also add you to our newsletter to keep you updated with the latest insights.
+              </Typography>
+              <TextField
+                autoFocus
+                fullWidth
+                type="email"
+                label="Email address"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="your@email.com"
+                disabled={emailDialogLoading}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleEmailSubmit();
+                  }
+                }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEmailDialogOpen(false)} disabled={emailDialogLoading}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEmailSubmit} 
+              variant="contained"
+              disabled={emailDialogLoading || !emailInput.trim()}
+              startIcon={emailDialogLoading ? <CircularProgress size={16} /> : null}
+            >
+              {emailDialogLoading ? 'Saving...' : 'Continue'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Comments Section */}
         <Box>

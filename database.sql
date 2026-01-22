@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   email TEXT NOT NULL UNIQUE,
   name TEXT,
   status TEXT DEFAULT 'subscribed' CHECK (status IN ('subscribed', 'unsubscribed', 'bounced')),
-  source TEXT DEFAULT 'manual' CHECK (source IN ('manual', 'purchase', 'signup')),
+  source TEXT DEFAULT 'manual' CHECK (source IN ('manual', 'purchase', 'signup', 'like')),
   subscribed_at TIMESTAMPTZ DEFAULT NOW(),
   unsubscribed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),

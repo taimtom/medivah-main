@@ -13,23 +13,33 @@ import { supabase } from './client';
  * Toggle like/dislike for a blog post
  * @param {string} blogId - The blog post ID
  * @param {boolean} isLike - true for like, false for dislike
+ * @param {string} [userEmail] - User email (for anonymous likes)
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  */
-export async function toggleBlogLike(blogId, isLike) {
+export async function toggleBlogLike(blogId, isLike, userEmail = null) {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     
-    if (authError || !user) {
-      return { success: false, error: 'You must be signed in to like posts' };
+    // Use user_id if authenticated, otherwise use email
+    const identifier = user?.id ? { user_id: user.id } : { user_email: userEmail?.toLowerCase() };
+    
+    if (!user?.id && !userEmail) {
+      return { success: false, error: 'Email is required to like posts' };
     }
 
-    // Check if user already liked/disliked this post
-    const { data: existingLike, error: fetchError } = await supabase
+    // Build query to check for existing like
+    let query = supabase
       .from('blog_likes')
       .select('*')
-      .eq('blog_id', blogId)
-      .eq('user_id', user.id)
-      .single();
+      .eq('blog_id', blogId);
+    
+    if (user?.id) {
+      query = query.eq('user_id', user.id);
+    } else {
+      query = query.eq('user_email', userEmail.toLowerCase());
+    }
+    
+    const { data: existingLike, error: fetchError } = await query.single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
       // PGRST116 = no rows returned, which is fine
@@ -67,15 +77,16 @@ export async function toggleBlogLike(blogId, isLike) {
     }
 
     // Create new like/dislike
+    const insertData = {
+      blog_id: blogId,
+      is_like: isLike,
+      ...(user?.id ? { user_id: user.id } : {}),
+      ...(userEmail && !user?.id ? { user_email: userEmail.toLowerCase() } : {}),
+    };
+
     const { data, error: insertError } = await supabase
       .from('blog_likes')
-      .insert([
-        {
-          blog_id: blogId,
-          user_id: user.id,
-          is_like: isLike,
-        },
-      ])
+      .insert([insertData])
       .select()
       .single();
 
@@ -92,9 +103,10 @@ export async function toggleBlogLike(blogId, isLike) {
 /**
  * Get like/dislike stats for a blog post
  * @param {string} blogId - The blog post ID
+ * @param {string} [userEmail] - User email (for anonymous likes)
  * @returns {Promise<{likesCount: number, dislikesCount: number, userReaction?: 'like'|'dislike'|null}>}
  */
-export async function getBlogLikeStats(blogId) {
+export async function getBlogLikeStats(blogId, userEmail = null) {
   try {
     // Get all likes/dislikes for this blog
     const { data: likes, error } = await supabase
@@ -110,12 +122,17 @@ export async function getBlogLikeStats(blogId) {
     const likesCount = likes.filter((l) => l.is_like).length;
     const dislikesCount = likes.filter((l) => !l.is_like).length;
 
-    // Check if current user has reacted
+    // Check if current user has reacted (by user_id or email)
     const { data: { user } } = await supabase.auth.getUser();
     let userReaction = null;
 
     if (user) {
       const userLike = likes.find((l) => l.user_id === user.id);
+      if (userLike) {
+        userReaction = userLike.is_like ? 'like' : 'dislike';
+      }
+    } else if (userEmail) {
+      const userLike = likes.find((l) => l.user_email?.toLowerCase() === userEmail.toLowerCase());
       if (userLike) {
         userReaction = userLike.is_like ? 'like' : 'dislike';
       }
