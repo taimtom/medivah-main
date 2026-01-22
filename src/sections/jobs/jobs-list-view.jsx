@@ -96,7 +96,7 @@ export function JobsListView() {
               Job Opportunities
             </Typography>
             <Typography variant="body1" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-              Explore HR and career opportunities from various organizations
+              Explore career opportunities from organizations across different industries.
             </Typography>
 
             {/* Search and Filters */}

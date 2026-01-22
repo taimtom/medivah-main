@@ -38,8 +38,7 @@ export function HomeHero() {
           </Typography>
 
           <Typography variant="h5" sx={{ color: 'text.secondary', fontWeight: 400 }}>
-            Your trusted hub for HR knowledge, career guidance, and workplace insights.
-            Learn, grow, and access valuable professional insights in a simple, relatable way.
+            A digital space for career knowledge, guidance, workplace insights, and resources, shared simply and practically to support growth through every phase of your professional journey.
           </Typography>
 
           <Stack

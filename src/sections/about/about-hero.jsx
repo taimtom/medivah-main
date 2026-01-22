@@ -23,8 +23,7 @@ export function AboutHero() {
           <Typography variant="h1">About Mavidah</Typography>
 
           <Typography variant="h5" sx={{ color: 'text.secondary', fontWeight: 400 }}>
-            A digital space built to share HR knowledge, career guidance, and workplace insights 
-            in a simple, relatable, and practical way.
+            A digital space created to share career knowledge, guidance, workplace insights, and resources in a simple, relatable, and practical way that supports growth at every stage of your professional journey.
           </Typography>
         </Stack>
       </Container>

@@ -84,7 +84,7 @@ export function ResourcesListView() {
             Resources
           </Typography>
           <Typography variant="body1" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            Professional tools, templates, guides, and courses for HR excellence
+            Thoughtfully curated tools, templates, guides, and courses that support effective work practice, leadership, and professional growth.
           </Typography>
 
           {/* Category Filter */}

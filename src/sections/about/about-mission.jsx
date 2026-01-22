@@ -16,25 +16,25 @@ import { Iconify } from 'src/components/iconify';
 const VALUES = [
   {
     title: 'Knowledge Sharing',
-    description: 'Breaking down HR concepts and workplace topics in simple, actionable ways',
+    description: 'Breaking down HR concepts, career topics, and workplace realities into clear, accessible, and actionable ideas.',
     icon: 'solar:book-2-bold-duotone',
     color: 'primary',
   },
   {
-    title: 'Community Driven',
-    description: 'Welcoming expert contributions and diverse perspectives from HR professionals',
+    title: 'Community-Driven',
+    description: 'Welcoming expert contributors, practitioners, and diverse perspectives to enrich learning through shared experience.',
     icon: 'solar:users-group-rounded-bold-duotone',
     color: 'secondary',
   },
   {
     title: 'Practical Insights',
-    description: 'Providing real-world solutions and tools that work in actual workplace scenarios',
+    description: 'Focusing on real-world tools, examples, and solutions that work in everyday workplace situations.',
     icon: 'solar:lightbulb-bolt-bold-duotone',
     color: 'success',
   },
   {
-    title: 'Growth Focused',
-    description: 'Inspiring personal and professional development through valuable resources',
+    title: 'Growth-Focused',
+    description: 'Supporting personal and professional development at every stage of the professional journey through thoughtful, valuable resources.',
     icon: 'solar:chart-2-bold-duotone',
     color: 'warning',
   },
@@ -53,16 +53,13 @@ export function AboutMission() {
           <Stack spacing={3} sx={{ textAlign: 'center', maxWidth: 720, mx: 'auto' }}>
             <Typography variant="h3">Our Mission</Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: 18 }}>
-              Mavidah is designed as a "bloc"—a community where people can learn, grow, and access 
-              valuable professional insights. We aim to break down HR concepts, explore career topics, 
-              and discuss what truly works in the workplace.
+              Mavidah is a collaborative digital space built to share career knowledge, guidance, and workplace insights in a simple, relatable, and practical way.
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: 18 }}>
-              The platform is intentionally collaborative, welcoming expert writers, HR professionals, 
-              and experienced contributors to enrich the community with diverse perspectives. Mavidah 
-              aims to be more than a blog—it's a learning hub where people come to understand what 
-              truly works at work, discover actionable ideas, and connect with insights that inspire 
-              personal and professional growth.
+              We exist to help people learn, grow, and make sense of work at every stage of their professional journey by breaking down real career questions, exploring workplace dynamics, and examining what truly works in the modern world of work.
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: 18 }}>
+              Mavidah is intentionally community-driven, welcoming expert writers, HR professionals, and experienced practitioners to contribute diverse, grounded perspectives. More than a blog, Mavidah is a learning hub where people come to understand work beyond titles, discover actionable ideas, and engage with insights that support meaningful personal and professional growth.
             </Typography>
           </Stack>
 

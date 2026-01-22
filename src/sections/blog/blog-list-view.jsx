@@ -77,7 +77,7 @@ export function BlogListView() {
             Blog
           </Typography>
           <Typography variant="body1" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            Explore HR knowledge, career guidance, and workplace insights
+            Insights on careers, leadership, and growth in the modern workplace.
           </Typography>
 
           {/* Search and Filter */}
