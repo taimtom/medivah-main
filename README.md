@@ -211,6 +211,56 @@ warning: {
 
 6. Check Dashboard → Orders to see the completed order
 
+## 📧 Test Email Delivery
+
+### Using the Test Script (Recommended)
+
+1. Make sure your development server is running:
+   ```bash
+   npm run dev
+   ```
+
+2. Run the test script:
+   ```bash
+   # Test all email types
+   node test-email.js your@email.com
+
+   # Test specific email type
+   node test-email.js your@email.com contact
+   node test-email.js your@email.com order
+   node test-email.js your@email.com newsletter
+   ```
+
+3. Check your inbox for the test emails
+
+### Using the API Endpoint Directly
+
+You can also test emails by calling the API endpoint directly:
+
+**GET Request:**
+```bash
+# Test all email types
+curl "http://localhost:3033/api/email/test?email=your@email.com&type=all"
+
+# Test specific type
+curl "http://localhost:3033/api/email/test?email=your@email.com&type=contact"
+```
+
+**POST Request:**
+```bash
+curl -X POST http://localhost:3033/api/email/test \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your@email.com", "type": "all"}'
+```
+
+### Troubleshooting Email Issues
+
+- **Check RESEND_API_KEY**: Make sure `RESEND_API_KEY` is set in your `.env.local`
+- **Verify Resend Domain**: Ensure your domain is verified in Resend dashboard
+- **Check Spam Folder**: Test emails might go to spam initially
+- **Review API Response**: The test endpoint returns detailed error messages
+- **Check Resend Dashboard**: Visit https://resend.com/emails to see sent emails
+
 ## 📦 Deploy to Vercel
 
 ```bash
