@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { MainLayout } from 'src/layouts/main';
 import Box from '@mui/material/Box';
@@ -16,35 +17,70 @@ import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
+import Pagination from '@mui/material/Pagination';
 
 import { Iconify } from 'src/components/iconify';
 import { CONFIG } from 'src/config-global';
 import { supabase } from 'src/lib/supabase';
 import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
 const JOB_TYPES = ['All', 'Full-time', 'Part-time', 'Contract', 'Remote'];
 const EXPERIENCE_LEVELS = ['All', 'Entry Level', '1-3 years', '3-5 years', '5+ years'];
+const ITEMS_PER_PAGE = 9;
 
 // ----------------------------------------------------------------------
 
 export function JobsListView() {
+  const { user } = useAuthContext();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [jobs, setJobs] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [verifiedMemberIds, setVerifiedMemberIds] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedExperience, setSelectedExperience] = useState('All');
 
+  const rawPageParam = searchParams.get('page');
+  const pageParam = Number(rawPageParam || '1');
+  const hasInvalidPageParam = rawPageParam !== null && (Number.isNaN(pageParam) || pageParam < 1);
+  const currentPage = hasInvalidPageParam ? 1 : pageParam;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const updatePageInUrl = useCallback(
+    (page) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (page <= 1) {
+        params.delete('page');
+      } else {
+        params.set('page', String(page));
+      }
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
   const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE - 1;
+
       let query = supabase
         .from('jobs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('published', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(start, end);
 
       if (selectedType !== 'All') {
         query = query.eq('type', selectedType);
@@ -60,20 +96,83 @@ export function JobsListView() {
         );
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query;
 
       if (error) throw error;
+
+      const safeTotalCount = count ?? 0;
+      const safeTotalPages = Math.max(1, Math.ceil(safeTotalCount / ITEMS_PER_PAGE));
+
+      if (safeTotalCount > 0 && currentPage > safeTotalPages) {
+        updatePageInUrl(safeTotalPages);
+        return;
+      }
+
+      if (safeTotalCount === 0 && currentPage !== 1) {
+        updatePageInUrl(1);
+        return;
+      }
+
       setJobs(data || []);
+      setTotalCount(safeTotalCount);
+
+      if (data && data.length > 0) {
+        const memberIds = [...new Set(data.map((j) => j.member_id).filter(Boolean))];
+        if (memberIds.length > 0) {
+          const { data: verifications } = await supabase
+            .from('employer_verifications')
+            .select('member_id')
+            .in('member_id', memberIds)
+            .eq('status', 'approved');
+          setVerifiedMemberIds(new Set((verifications || []).map((v) => v.member_id)));
+        }
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedType, selectedExperience]);
+  }, [currentPage, searchQuery, selectedType, selectedExperience, updatePageInUrl]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
+
+  useEffect(() => {
+    if (hasInvalidPageParam) {
+      updatePageInUrl(1);
+    }
+  }, [hasInvalidPageParam, updatePageInUrl]);
+
+  const handleSearchChange = useCallback(
+    (event) => {
+      setSearchQuery(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
+
+  const handleTypeChange = useCallback(
+    (event) => {
+      setSelectedType(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
+
+  const handleExperienceChange = useCallback(
+    (event) => {
+      setSelectedExperience(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
 
   const handleApply = (job) => {
     if (job.apply_method === 'link' && job.apply_link) {
@@ -82,6 +181,46 @@ export function JobsListView() {
       const subject = `Application for ${job.title}`;
       const body = `Hi,\n\nI would like to apply for the ${job.title} position at ${job.company}.\n\nBest regards,`;
       window.location.href = `mailto:${job.apply_email || CONFIG.site.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+  };
+
+  const handleInternalApply = async (job) => {
+    if (!user?.id) return;
+
+    if (job.requires_verification_for_internal_only && !verifiedMemberIds.has(job.member_id)) {
+      alert('This employer requires verified status to accept internal applications. Please use the external apply option.');
+      return;
+    }
+
+    const coverLetter = window.prompt('Optional: add a short cover letter');
+    try {
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: job.id,
+          applicant_id: user.id,
+          employer_member_id: job.member_id,
+          cover_letter: coverLetter || null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to apply');
+      alert('Application submitted');
+    } catch (error) {
+      alert(error.message || 'Application failed');
+    }
+  };
+
+  const handleSaveJob = async (job) => {
+    if (!user?.id) return;
+    const response = await fetch('/api/saved-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicant_id: user.id, job_id: job.id }),
+    });
+    if (response.ok) {
+      alert('Job saved');
     }
   };
 
@@ -105,7 +244,7 @@ export function JobsListView() {
                 fullWidth
                 placeholder="Search jobs by title, company, or location..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -119,7 +258,7 @@ export function JobsListView() {
                 <TextField
                   select
                   value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
+                  onChange={handleTypeChange}
                   sx={{ minWidth: { sm: 200 } }}
                   label="Job Type"
                 >
@@ -133,7 +272,7 @@ export function JobsListView() {
                 <TextField
                   select
                   value={selectedExperience}
-                  onChange={(e) => setSelectedExperience(e.target.value)}
+                  onChange={handleExperienceChange}
                   sx={{ minWidth: { sm: 200 } }}
                   label="Experience Level"
                 >
@@ -162,12 +301,13 @@ export function JobsListView() {
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={3}>
-              {jobs.map((job) => (
-                <Grid item xs={12} key={job.id}>
-                  <Card>
-                    <CardContent>
-                      <Grid container spacing={3}>
+            <Stack spacing={4}>
+              <Grid container spacing={3}>
+                {jobs.map((job) => (
+                  <Grid item xs={12} key={job.id}>
+                    <Card>
+                      <CardContent>
+                        <Grid container spacing={3}>
                         {/* Job Details */}
                         <Grid item xs={12} md={8}>
                           <Stack spacing={2}>
@@ -182,6 +322,14 @@ export function JobsListView() {
                               )}
                               {job.experience && (
                                 <Chip label={job.experience} size="small" variant="outlined" />
+                              )}
+                              {verifiedMemberIds.has(job.member_id) && (
+                                <Chip
+                                  label="Verified Employer"
+                                  size="small"
+                                  color="success"
+                                  icon={<Iconify icon="solar:verified-check-bold-duotone" width={14} />}
+                                />
                               )}
                             </Stack>
 
@@ -275,38 +423,80 @@ export function JobsListView() {
                               alignItems: { md: 'flex-end' },
                             }}
                           >
-                            <Button
-                              variant="contained"
-                              size="large"
-                              fullWidth={{ xs: true, md: false }}
-                              onClick={() => handleApply(job)}
-                              startIcon={
-                                <Iconify
-                                  icon={
-                                    job.apply_method === 'link'
-                                      ? 'solar:link-bold-duotone'
-                                      : 'solar:letter-bold-duotone'
+                            {user?.role === 'applicant' && job.apply_method === 'internal' ? (
+                              <Button
+                                variant="contained"
+                                size="large"
+                                fullWidth={{ xs: true, md: false }}
+                                onClick={() => handleInternalApply(job)}
+                                startIcon={<Iconify icon="solar:document-add-bold-duotone" />}
+                              >
+                                {job.apply_method === 'internal' ? 'Apply via Mavidah' : 'Apply In Platform'}
+                              </Button>
+                            ) : null}
+                            {user?.role === 'applicant' ? (
+                              <Button
+                                variant="text"
+                                fullWidth={{ xs: true, md: false }}
+                                onClick={() => handleSaveJob(job)}
+                                startIcon={<Iconify icon="solar:bookmark-bold-duotone" />}
+                              >
+                                Save Job
+                              </Button>
+                            ) : null}
+                            {job.apply_method !== 'internal' && (
+                              <>
+                                <Button
+                                  variant={user?.role === 'applicant' && job.accept_internal_applications ? 'outlined' : 'contained'}
+                                  size="large"
+                                  fullWidth={{ xs: true, md: false }}
+                                  onClick={() => handleApply(job)}
+                                  startIcon={
+                                    <Iconify
+                                      icon={
+                                        job.apply_method === 'link'
+                                          ? 'solar:link-bold-duotone'
+                                          : 'solar:letter-bold-duotone'
+                                      }
+                                    />
                                   }
-                                />
-                              }
-                            >
-                              Apply Now
-                            </Button>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ textAlign: { md: 'right' } }}
-                            >
-                              {job.apply_method === 'link' ? 'Apply via link' : 'Apply via email'}
-                            </Typography>
+                                >
+                                  Apply Now
+                                </Button>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ textAlign: { md: 'right' } }}
+                                >
+                                  {job.apply_method === 'link' ? 'Apply via link' : 'Apply via email'}
+                                </Typography>
+                              </>
+                            )}
+                            {job.apply_method === 'internal' && !user?.id && (
+                              <Typography variant="caption" color="text.secondary" sx={{ textAlign: { md: 'right' } }}>
+                                Sign in to apply
+                              </Typography>
+                            )}
                           </Stack>
                         </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {totalPages > 1 && (
+                <Stack alignItems="center">
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={(_, page) => updatePageInUrl(page)}
+                    color="primary"
+                  />
+                </Stack>
+              )}
+            </Stack>
           )}
         </Container>
       </Box>

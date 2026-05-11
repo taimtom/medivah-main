@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { MainLayout } from 'src/layouts/main';
 import Box from '@mui/material/Box';
@@ -17,6 +18,7 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
+import Pagination from '@mui/material/Pagination';
 
 import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
@@ -31,41 +33,101 @@ const CATEGORIES = [
   'Learning & Courses',
   'Research & Insights',
 ];
+const ITEMS_PER_PAGE = 9;
 
 // ----------------------------------------------------------------------
 
 export function ResourcesListView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const rawPageParam = searchParams.get('page');
+  const pageParam = Number(rawPageParam || '1');
+  const hasInvalidPageParam = rawPageParam !== null && (Number.isNaN(pageParam) || pageParam < 1);
+  const currentPage = hasInvalidPageParam ? 1 : pageParam;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const updatePageInUrl = useCallback(
+    (page) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (page <= 1) {
+        params.delete('page');
+      } else {
+        params.set('page', String(page));
+      }
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('products')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('published', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(start, end);
 
       if (selectedCategory !== 'All') {
         query = query.eq('category', selectedCategory);
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query;
 
       if (error) throw error;
+      const safeTotalCount = count ?? 0;
+      const safeTotalPages = Math.max(1, Math.ceil(safeTotalCount / ITEMS_PER_PAGE));
+
+      if (safeTotalCount > 0 && currentPage > safeTotalPages) {
+        updatePageInUrl(safeTotalPages);
+        return;
+      }
+
+      if (safeTotalCount === 0 && currentPage !== 1) {
+        updatePageInUrl(1);
+        return;
+      }
+
       setProducts(data || []);
+      setTotalCount(safeTotalCount);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory]);
+  }, [currentPage, selectedCategory, updatePageInUrl]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (hasInvalidPageParam) {
+      updatePageInUrl(1);
+    }
+  }, [hasInvalidPageParam, updatePageInUrl]);
+
+  const handleCategoryChange = useCallback(
+    (event) => {
+      setSelectedCategory(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-NG', {
@@ -101,7 +163,7 @@ export function ResourcesListView() {
             <TextField
               select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={handleCategoryChange}
               sx={{ minWidth: 250 }}
               label="Category"
             >
@@ -129,80 +191,93 @@ export function ResourcesListView() {
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
-            {products.map((product) => (
-              <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <CardActionArea
-                    component={RouterLink}
-                    href={paths.resources.product(product.id)}
-                    sx={{ flexGrow: 1 }}
-                  >
-                    {product.image_url && (
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={product.image_url}
-                        alt={product.name}
-                      />
-                    )}
-                    <CardContent>
-                      <Stack spacing={2}>
-                        {product.category && (
-                          <Chip
-                            label={product.category}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ width: 'fit-content' }}
-                          />
-                        )}
-                        <Typography variant="h6" gutterBottom>
-                          {product.name}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            minHeight: 40,
-                          }}
-                        >
-                          {product.description}
-                        </Typography>
-                        {product.is_free ? (
-                          <Chip
-                            label="FREE"
-                            color="success"
-                            size="small"
-                            sx={{ width: 'fit-content' }}
-                          />
-                        ) : (
-                          <Typography variant="h5" color="primary.main">
-                            {formatPrice(product.price)}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </CardContent>
-                  </CardActionArea>
-                  <Box sx={{ p: 2, pt: 0 }}>
-                    <Button
+          <Stack spacing={4}>
+            <Grid container spacing={3}>
+              {products.map((product) => (
+                <Grid item xs={12} sm={6} md={4} key={product.id}>
+                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <CardActionArea
                       component={RouterLink}
                       href={paths.resources.product(product.id)}
-                      variant="contained"
-                      fullWidth
+                      sx={{ flexGrow: 1 }}
                     >
-                      View Details
-                    </Button>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                      {product.image_url && (
+                        <CardMedia
+                          component="img"
+                          height="200"
+                          image={product.image_url}
+                          alt={product.name}
+                        />
+                      )}
+                      <CardContent>
+                        <Stack spacing={2}>
+                          {product.category && (
+                            <Chip
+                              label={product.category}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ width: 'fit-content' }}
+                            />
+                          )}
+                          <Typography variant="h6" gutterBottom>
+                            {product.name}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              minHeight: 40,
+                            }}
+                          >
+                            {product.description}
+                          </Typography>
+                          {product.is_free ? (
+                            <Chip
+                              label="FREE"
+                              color="success"
+                              size="small"
+                              sx={{ width: 'fit-content' }}
+                            />
+                          ) : (
+                            <Typography variant="h5" color="primary.main">
+                              {formatPrice(product.price)}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Button
+                        component={RouterLink}
+                        href={paths.resources.product(product.id)}
+                        variant="contained"
+                        fullWidth
+                      >
+                        View Details
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {totalPages > 1 && (
+              <Stack alignItems="center">
+                <Pagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={(_, page) => updatePageInUrl(page)}
+                  color="primary"
+                />
+              </Stack>
+            )}
+          </Stack>
         )}
       </Container>
     </Box>

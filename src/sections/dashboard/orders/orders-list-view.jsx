@@ -16,21 +16,37 @@ import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { supabase } from 'src/lib/supabase';
+import { isAdminRole } from 'src/lib/member-profile';
 
 // ----------------------------------------------------------------------
 
 export function OrdersListView() {
+  const { user } = useAuthContext();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = useCallback(async () => {
+    if (!user?.id) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!isAdminRole(user.role)) {
+        query = query.eq('resource_member_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setOrders(data || []);
@@ -39,7 +55,7 @@ export function OrdersListView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     fetchOrders();
@@ -73,6 +89,11 @@ export function OrdersListView() {
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h4">Orders Management</Typography>
         </Stack>
+        {!isAdminRole(user?.role) ? (
+          <Typography variant="body2" color="text.secondary">
+            Showing purchases of your resources only. Platform admins can view all orders.
+          </Typography>
+        ) : null}
 
         {/* Stats Cards */}
         <Stack direction="row" spacing={2} sx={{ mb: 3 }}>

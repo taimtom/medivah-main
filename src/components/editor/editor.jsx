@@ -2,7 +2,6 @@
 
 import { useMemo, forwardRef } from 'react';
 import dynamic from 'next/dynamic';
-import 'react-quill/dist/quill.snow.css';
 
 import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
@@ -10,11 +9,15 @@ import FormHelperText from '@mui/material/FormHelperText';
 
 // ----------------------------------------------------------------------
 
-// Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import('react-quill'), {
-  ssr: false,
-  loading: () => <p>Loading editor...</p>,
-});
+// Dynamically import ReactQuill (with its CSS) so neither the JS nor the
+// stylesheet is included in the initial bundle — both load on first render.
+const ReactQuill = dynamic(
+  async () => {
+    await import('react-quill/dist/quill.snow.css');
+    return import('react-quill');
+  },
+  { ssr: false, loading: () => <p>Loading editor...</p> }
+);
 
 // ----------------------------------------------------------------------
 

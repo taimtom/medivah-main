@@ -27,6 +27,8 @@ import { Iconify } from 'src/components/iconify';
 import { Editor } from 'src/components/editor';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
+import { useAuthContext } from 'src/auth/hooks';
+import { buildRecordOwnership, scopeOwnedQuery } from 'src/lib/ownership';
 
 // ----------------------------------------------------------------------
 
@@ -34,6 +36,7 @@ const CATEGORIES = ['HR Basics', 'Career Growth', 'Leadership', 'Workplace Cultu
 
 export function BlogFormView({ id }) {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [currentTab, setCurrentTab] = useState('edit');
@@ -58,7 +61,10 @@ export function BlogFormView({ id }) {
 
   const fetchBlog = async () => {
     try {
-      const { data, error } = await supabase.from('blogs').select('*').eq('id', id).single();
+      const query = scopeOwnedQuery(supabase.from('blogs').select('*'), user?.role, user?.id)
+        .eq('id', id)
+        .single();
+      const { data, error } = await query;
 
       if (error) throw error;
       setFormData({
@@ -106,15 +112,20 @@ export function BlogFormView({ id }) {
     setSaving(true);
 
     try {
-      const blogData = {
+      const blogData = buildRecordOwnership(user?.role, user?.id, {
         ...formData,
         tags: formData.tags ? formData.tags.split(',').map((tag) => tag.trim()) : [],
         updated_at: new Date().toISOString(),
-      };
+        author_id: user?.id,
+      });
 
       if (id) {
         // Update existing blog
-        const { error } = await supabase.from('blogs').update(blogData).eq('id', id);
+        const { error } = await scopeOwnedQuery(
+          supabase.from('blogs').update(blogData),
+          user?.role,
+          user?.id
+        ).eq('id', id);
         if (error) throw error;
       } else {
         // Create new blog

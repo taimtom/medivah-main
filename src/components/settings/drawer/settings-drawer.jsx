@@ -154,7 +154,7 @@ export function SettingsDrawer({
     <FontOptions
       value={settings.fontFamily}
       onClickOption={(newValue) => settings.onUpdateField('fontFamily', newValue)}
-      options={[defaultFont, 'Inter', 'DM Sans', 'Nunito Sans']}
+      options={[defaultFont]}
     />
   );
 
@@ -187,7 +187,7 @@ export function SettingsDrawer({
           </Box>
           {!(hideNavLayout && hideNavColor) && renderNav}
           {!hidePresets && renderPresets}
-          {!hideFont && renderFont}
+          {/* Font switcher hidden: only one font family active (Public Sans). */}
         </Stack>
       </Scrollbar>
     </Drawer>

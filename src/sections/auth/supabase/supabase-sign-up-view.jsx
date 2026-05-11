@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import LoadingButton from '@mui/lab/LoadingButton';
@@ -18,6 +19,8 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { useBoolean } from 'src/hooks/use-boolean';
+
+import { supabase } from 'src/lib/supabase';
 
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
@@ -38,6 +41,8 @@ export const SignUpSchema = zod.object({
     .string()
     .min(1, { message: 'Password is required!' })
     .min(6, { message: 'Password must be at least 6 characters!' }),
+  company: zod.string().optional(),
+  businessRole: zod.enum(['member', 'recruiter', 'applicant']),
 });
 
 // ----------------------------------------------------------------------
@@ -56,6 +61,8 @@ export function SupabaseSignUpView() {
     lastName: '',
     email: '',
     password: '',
+    company: '',
+    businessRole: 'member',
   };
 
   const methods = useForm({
@@ -75,11 +82,32 @@ export function SupabaseSignUpView() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        company: data.company || null,
+        businessRole: data.businessRole,
       });
       
       await checkUserSession?.();
 
-      router.push(paths.dashboard.root);
+      if (['member', 'recruiter'].includes(data.businessRole)) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (token && typeof window !== 'undefined') {
+          await fetch(`${window.location.origin}/api/credits/grant-free`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ type: 'signup' }),
+          }).catch(() => {});
+        }
+      }
+
+      const redirectPath =
+        data.businessRole === 'applicant'
+          ? paths.dashboard.applicant.root
+          : paths.dashboard.root;
+      router.push(redirectPath);
     } catch (error) {
       console.error(error);
       setErrorMsg(error instanceof Error ? error.message : error);
@@ -110,6 +138,16 @@ export function SupabaseSignUpView() {
       </Stack>
 
       <Field.Text name="email" label="Email address" InputLabelProps={{ shrink: true }} />
+
+      <Field.Text name="businessRole" label="Account type" select InputLabelProps={{ shrink: true }}>
+        <MenuItem value="applicant">Job Seeker / Applicant</MenuItem>
+        <MenuItem value="member">Member</MenuItem>
+        <MenuItem value="recruiter">Recruiter</MenuItem>
+      </Field.Text>
+
+      {methods.watch('businessRole') !== 'applicant' && (
+        <Field.Text name="company" label="Company (optional)" InputLabelProps={{ shrink: true }} />
+      )}
 
       <Field.Text
         name="password"

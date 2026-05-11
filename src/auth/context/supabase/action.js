@@ -17,13 +17,22 @@ export const signInWithPassword = async ({ email, password }) => {
 
 // ----------------------------------------------------------------------
 
-export const signUp = async ({ email, password, firstName, lastName }) => {
+export const signUp = async ({
+  email,
+  password,
+  firstName,
+  lastName,
+  businessRole = 'member',
+  company = null,
+}) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name: `${firstName} ${lastName}`,
+        business_role: businessRole,
+        company,
       },
     },
   });
@@ -48,9 +57,15 @@ export const signOut = async () => {
 // ----------------------------------------------------------------------
 
 export const resetPassword = async ({ email }) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/supabase/update-password`,
-  });
+  const redirectTo =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/supabase/update-password`
+      : undefined;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email,
+    redirectTo ? { redirectTo } : undefined
+  );
 
   if (error) {
     throw new Error(error.message);

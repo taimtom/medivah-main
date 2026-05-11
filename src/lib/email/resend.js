@@ -59,17 +59,22 @@ export async function sendContactEmail({ name, email, subject, message }) {
     return { success: true, data };
   } catch (error) {
     console.error('Resend email error:', error);
-    
+
     // Check for domain restriction error (403)
-    if (error.message?.includes('403') || error.message?.includes('Forbidden') || 
-        error.message?.includes('domain') || error.message?.includes('resend.dev')) {
-      return { 
-        success: false, 
-        error: 'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
-        details: error.message
+    if (
+      error.message?.includes('403') ||
+      error.message?.includes('Forbidden') ||
+      error.message?.includes('domain') ||
+      error.message?.includes('resend.dev')
+    ) {
+      return {
+        success: false,
+        error:
+          'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
+        details: error.message,
       };
     }
-    
+
     return { success: false, error: error.message };
   }
 }
@@ -136,17 +141,22 @@ export async function sendOrderConfirmationEmail({
     return { success: true, data };
   } catch (error) {
     console.error('Order confirmation email error:', error);
-    
+
     // Check for domain restriction error (403)
-    if (error.message?.includes('403') || error.message?.includes('Forbidden') || 
-        error.message?.includes('domain') || error.message?.includes('resend.dev')) {
-      return { 
-        success: false, 
-        error: 'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
-        details: error.message
+    if (
+      error.message?.includes('403') ||
+      error.message?.includes('Forbidden') ||
+      error.message?.includes('domain') ||
+      error.message?.includes('resend.dev')
+    ) {
+      return {
+        success: false,
+        error:
+          'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
+        details: error.message,
       };
     }
-    
+
     return { success: false, error: error.message };
   }
 }
@@ -246,17 +256,22 @@ export async function sendNewsletterEmail({
     return { success: true, data };
   } catch (error) {
     console.error('Newsletter email error:', error);
-    
+
     // Check for domain restriction error (403)
-    if (error.message?.includes('403') || error.message?.includes('Forbidden') || 
-        error.message?.includes('domain') || error.message?.includes('resend.dev')) {
-      return { 
-        success: false, 
-        error: 'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
-        details: error.message
+    if (
+      error.message?.includes('403') ||
+      error.message?.includes('Forbidden') ||
+      error.message?.includes('domain') ||
+      error.message?.includes('resend.dev')
+    ) {
+      return {
+        success: false,
+        error:
+          'Domain restriction: The resend.dev domain can only send to your verified email address. To send to other recipients, verify a custom domain in Resend dashboard and update the "from" address in your code.',
+        details: error.message,
       };
     }
-    
+
     return { success: false, error: error.message };
   }
 }

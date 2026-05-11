@@ -20,12 +20,16 @@ import { Iconify } from 'src/components/iconify';
 import { CONFIG } from 'src/config-global';
 import { supabase } from 'src/lib/supabase';
 import { ShareButtons } from 'src/components/share-buttons';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
 export function JobDetailView({ jobId }) {
+  const { user } = useAuthContext();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [submittingInternal, setSubmittingInternal] = useState(false);
+  const [isEmployerVerified, setIsEmployerVerified] = useState(false);
 
   useEffect(() => {
     fetchJob();
@@ -50,6 +54,16 @@ export function JobDetailView({ jobId }) {
 
       if (error) throw error;
       setJob(data);
+
+      if (data?.member_id) {
+        const { data: verif } = await supabase
+          .from('employer_verifications')
+          .select('status')
+          .eq('member_id', data.member_id)
+          .eq('status', 'approved')
+          .maybeSingle();
+        setIsEmployerVerified(Boolean(verif));
+      }
     } catch (error) {
       console.error('Error fetching job:', error);
     } finally {
@@ -66,6 +80,49 @@ export function JobDetailView({ jobId }) {
       const subject = `Application for ${job.title}`;
       const body = `Hi,\n\nI would like to apply for the ${job.title} position at ${job.company}.\n\nBest regards,`;
       window.location.href = `mailto:${job.apply_email || CONFIG.site.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+  };
+
+  const handleInternalApply = async () => {
+    if (!job || !user?.id) return;
+
+    if (job.requires_verification_for_internal_only && !isEmployerVerified) {
+      alert('This employer requires verified status to accept internal applications. Please use the external apply option.');
+      return;
+    }
+
+    const coverLetter = window.prompt('Optional: add a short cover letter');
+    try {
+      setSubmittingInternal(true);
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: job.id,
+          applicant_id: user.id,
+          employer_member_id: job.member_id,
+          cover_letter: coverLetter || null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to submit application');
+      alert('Application submitted successfully');
+    } catch (error) {
+      alert(error.message || 'Could not submit application');
+    } finally {
+      setSubmittingInternal(false);
+    }
+  };
+
+  const handleSaveJob = async () => {
+    if (!job || !user?.id) return;
+    const response = await fetch('/api/saved-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicant_id: user.id, job_id: job.id }),
+    });
+    if (response.ok) {
+      alert('Job saved');
     }
   };
 
@@ -131,6 +188,14 @@ export function JobDetailView({ jobId }) {
                     )}
                     {job.experience && (
                       <Chip label={job.experience} size="small" variant="outlined" />
+                    )}
+                    {isEmployerVerified && (
+                      <Chip
+                        label="Verified Employer"
+                        size="small"
+                        color="success"
+                        icon={<Iconify icon="solar:verified-check-bold-duotone" width={14} />}
+                      />
                     )}
                   </Stack>
 
@@ -393,26 +458,64 @@ export function JobDetailView({ jobId }) {
 
                 {/* Apply Section */}
                 <Stack spacing={2} sx={{ pt: 2 }}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    onClick={handleApply}
-                    startIcon={
-                      <Iconify
-                        icon={
-                          job.apply_method === 'link'
-                            ? 'solar:link-bold-duotone'
-                            : 'solar:letter-bold-duotone'
+                  {user?.role === 'applicant' ? (
+                    <Button variant="text" onClick={handleSaveJob} startIcon={<Iconify icon="solar:bookmark-bold-duotone" />}>
+                      Save Job
+                    </Button>
+                  ) : null}
+
+                  {user?.role === 'applicant' && job.apply_method === 'internal' ? (
+                    <Button
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      onClick={handleInternalApply}
+                      disabled={submittingInternal}
+                      startIcon={<Iconify icon="solar:document-add-bold-duotone" />}
+                    >
+                      {submittingInternal
+                        ? 'Submitting...'
+                        : job.apply_method === 'internal'
+                        ? 'Apply via Mavidah'
+                        : 'Apply In Platform'}
+                    </Button>
+                  ) : null}
+
+                  {job.apply_method !== 'internal' && (
+                    <>
+                      <Button
+                        variant={user?.role === 'applicant' && job.accept_internal_applications ? 'outlined' : 'contained'}
+                        size="large"
+                        fullWidth
+                        onClick={handleApply}
+                        startIcon={
+                          <Iconify
+                            icon={
+                              job.apply_method === 'link'
+                                ? 'solar:link-bold-duotone'
+                                : 'solar:letter-bold-duotone'
+                            }
+                          />
                         }
-                      />
-                    }
-                  >
-                    Apply Now
-                  </Button>
-                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                    {job.apply_method === 'link' ? 'Apply via link' : 'Apply via email'}
-                  </Typography>
+                      >
+                        Apply Now
+                      </Button>
+                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                        {job.apply_method === 'link' ? 'Apply via link' : 'Apply via email'}
+                      </Typography>
+                    </>
+                  )}
+
+                  {job.apply_method === 'internal' && !user?.id && (
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                      <RouterLink
+                        href={`${paths.auth.supabase.signIn}?returnTo=${encodeURIComponent(`/jobs/${job.id}`)}`}
+                        style={{ color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        Sign in as a job seeker to apply via Mavidah.
+                      </RouterLink>
+                    </Typography>
+                  )}
                 </Stack>
               </Stack>
             </CardContent>

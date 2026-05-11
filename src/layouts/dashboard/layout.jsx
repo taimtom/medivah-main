@@ -12,6 +12,7 @@ import { _contacts, _notifications } from 'src/_mock';
 import { varAlpha, stylesMode } from 'src/theme/styles';
 
 import { bulletColor } from 'src/components/nav-section';
+import { RoleSwitcher } from 'src/components/role-switcher';
 import { useSettingsContext } from 'src/components/settings';
 
 import { Main } from './main';
@@ -38,6 +39,8 @@ export function DashboardLayout({ sx, children, data }) {
   const layoutQuery = 'lg';
 
   const navData = data?.nav ?? dashboardNavData;
+  const notificationsData = data?.notifications ?? _notifications;
+  const showNotificationsBell = Boolean(data?.showNotificationsBell);
 
   const isNavMini = settings.navLayout === 'mini';
 
@@ -75,7 +78,7 @@ export function DashboardLayout({ sx, children, data }) {
               account: [],
               contacts: _contacts,
               workspaces: _workspaces,
-              notifications: _notifications,
+              notifications: notificationsData,
             }}
             slotsDisplay={{
               signIn: false,
@@ -83,7 +86,7 @@ export function DashboardLayout({ sx, children, data }) {
               helpLink: false,
               workspaces: false,
               localization: false,
-              notifications: false,
+              notifications: showNotificationsBell,
             }}
             slots={{
               topArea: (
@@ -91,6 +94,7 @@ export function DashboardLayout({ sx, children, data }) {
                   This is an info Alert.
                 </Alert>
               ),
+              rightAreaStart: <RoleSwitcher />,
               bottomArea: isNavHorizontal ? (
                 <NavHorizontal
                   data={navData}

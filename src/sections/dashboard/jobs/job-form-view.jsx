@@ -20,6 +20,8 @@ import { Editor } from 'src/components/editor';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
 import { CONFIG } from 'src/config-global';
+import { useAuthContext } from 'src/auth/hooks';
+import { buildRecordOwnership, scopeOwnedQuery } from 'src/lib/ownership';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
@@ -32,6 +34,7 @@ const EXPERIENCE_LEVELS = ['Entry Level', '1-3 years', '3-5 years', '5+ years'];
 
 export function JobFormView({ id }) {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [descriptionTab, setDescriptionTab] = useState('edit');
@@ -44,9 +47,11 @@ export function JobFormView({ id }) {
     experience: '',
     description: '',
     requirements: '',
-    apply_method: 'email',
+    apply_method: 'internal',
     apply_email: CONFIG.site.contactEmail,
     apply_link: '',
+    accept_internal_applications: true,
+    requires_verification_for_internal_only: false,
     published: false,
   });
 
@@ -59,7 +64,13 @@ export function JobFormView({ id }) {
 
   const fetchJob = async () => {
     try {
-      const { data, error } = await supabase.from('jobs').select('*').eq('id', id).single();
+      const { data, error } = await scopeOwnedQuery(
+        supabase.from('jobs').select('*'),
+        user?.role,
+        user?.id
+      )
+        .eq('id', id)
+        .single();
 
       if (error) throw error;
       // Handle requirements - could be array (old format) or HTML string (new format)
@@ -78,10 +89,13 @@ export function JobFormView({ id }) {
         type: data.type || '',
         experience: data.experience || '',
         description: data.description || '',
-        requirements: requirements,
-        apply_method: data.apply_method || 'email',
+        requirements,
+        apply_method: data.apply_method || 'internal',
         apply_email: data.apply_email || CONFIG.site.contactEmail,
         apply_link: data.apply_link || '',
+        accept_internal_applications: data.accept_internal_applications ?? true,
+        requires_verification_for_internal_only:
+          data.requires_verification_for_internal_only ?? false,
         published: data.published || false,
       });
     } catch (error) {
@@ -114,15 +128,46 @@ export function JobFormView({ id }) {
 
     try {
       // Save requirements as HTML text instead of array
-      const jobData = {
+      const jobData = buildRecordOwnership(user?.role, user?.id, {
         ...formData,
-        requirements: formData.requirements || '', // Store as HTML string
+        requirements: formData.requirements || '',
+        accept_internal_applications:
+          formData.apply_method === 'internal' ? true : formData.accept_internal_applications,
         updated_at: new Date().toISOString(),
-      };
+      });
+
+      // Admins are exempt from buildRecordOwnership setting member_id,
+      // but we always need an owner recorded so applicants can reference the employer.
+      if (!jobData.member_id && user?.id) {
+        jobData.member_id = user.id;
+      }
 
       if (id) {
-        const { error } = await supabase.from('jobs').update(jobData).eq('id', id);
+        const { error } = await scopeOwnedQuery(
+          supabase.from('jobs').update(jobData),
+          user?.role,
+          user?.id
+        ).eq('id', id);
         if (error) throw error;
+      } else if (jobData.published && user?.role !== 'admin') {
+          const response = await fetch('/api/jobs/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...jobData,
+              member_id: user?.id,
+              idempotency_key: `job-publish-${Date.now()}`,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            if (response.status === 402 && result.insufficient_credits) {
+              throw new Error(
+                'Not enough credits to publish. Use Credits & Billing to buy a pack or wait for your monthly free post.'
+              );
+            }
+            throw new Error(result.error || 'Failed to publish job');
+          }
       } else {
         const { error } = await supabase.from('jobs').insert([jobData]);
         if (error) throw error;
@@ -325,11 +370,12 @@ export function JobFormView({ id }) {
                   fullWidth
                   helperText="Choose how applicants will apply for this job"
                 >
+                  <MenuItem value="internal">Apply via Mavidah (in-platform)</MenuItem>
                   <MenuItem value="email">Via Email</MenuItem>
                   <MenuItem value="link">Via Link</MenuItem>
                 </TextField>
 
-                {formData.apply_method === 'email' ? (
+                {formData.apply_method === 'email' && (
                   <TextField
                     name="apply_email"
                     label="Application Email"
@@ -340,7 +386,9 @@ export function JobFormView({ id }) {
                     fullWidth
                     helperText="Email where applications will be sent"
                   />
-                ) : (
+                )}
+
+                {formData.apply_method === 'link' && (
                   <TextField
                     name="apply_link"
                     label="Application Link"
@@ -360,6 +408,32 @@ export function JobFormView({ id }) {
                   }
                   label="Published"
                 />
+
+                {formData.apply_method !== 'internal' && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="accept_internal_applications"
+                        checked={formData.accept_internal_applications}
+                        onChange={handleChange}
+                      />
+                    }
+                    label="Also accept in-platform applications"
+                  />
+                )}
+
+                {(formData.apply_method === 'internal' || formData.accept_internal_applications) && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="requires_verification_for_internal_only"
+                        checked={formData.requires_verification_for_internal_only}
+                        onChange={handleChange}
+                      />
+                    }
+                    label="Require employer verification for internal-only applications"
+                  />
+                )}
               </Stack>
             </CardContent>
           </Card>

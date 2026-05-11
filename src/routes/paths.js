@@ -40,6 +40,8 @@ export const paths = {
     supabase: {
       signIn: `${ROOTS.AUTH}/supabase/sign-in`,
       signUp: `${ROOTS.AUTH}/supabase/sign-up`,
+      resetPassword: `${ROOTS.AUTH}/supabase/reset-password`,
+      updatePassword: `${ROOTS.AUTH}/supabase/update-password`,
     },
   },
   
@@ -63,6 +65,21 @@ export const paths = {
       new: `${ROOTS.DASHBOARD}/jobs/new`,
       edit: (id) => `${ROOTS.DASHBOARD}/jobs/${id}/edit`,
     },
+    applicant: {
+      root: `${ROOTS.DASHBOARD}/applicant`,
+      profile: `${ROOTS.DASHBOARD}/applicant/profile`,
+      applications: `${ROOTS.DASHBOARD}/applicant/applications`,
+      savedJobs: `${ROOTS.DASHBOARD}/applicant/saved-jobs`,
+      notifications: `${ROOTS.DASHBOARD}/applicant/notifications`,
+    },
+    applications: {
+      root: `${ROOTS.DASHBOARD}/applications`,
+      applicant: (userId) => `${ROOTS.DASHBOARD}/applications/applicant/${userId}`,
+    },
+    verification: {
+      root: `${ROOTS.DASHBOARD}/verification`,
+    },
+    billing: `${ROOTS.DASHBOARD}/billing`,
     orders: {
       root: `${ROOTS.DASHBOARD}/orders`,
       details: (id) => `${ROOTS.DASHBOARD}/orders/${id}`,

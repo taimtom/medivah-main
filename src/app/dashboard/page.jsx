@@ -1,10 +1,8 @@
-import { CONFIG } from 'src/config-global';
+'use client';
 
-import { AnalyticsView } from 'src/sections/dashboard/analytics';
+import { AnalyticsView } from 'src/sections/dashboard/analytics/analytics-view';
 
 // ----------------------------------------------------------------------
-
-export const metadata = { title: `Dashboard - ${CONFIG.site.name}` };
 
 export default function Page() {
   return <AnalyticsView />;

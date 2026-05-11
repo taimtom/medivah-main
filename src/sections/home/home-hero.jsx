@@ -7,8 +7,12 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import { CONFIG } from 'src/config-global';
 import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
+
+const signUpHref =
+  CONFIG.auth.method === 'supabase' ? paths.auth.supabase.signUp : paths.auth.jwt.signUp;
 
 // ----------------------------------------------------------------------
 
@@ -64,6 +68,16 @@ export function HomeHero() {
               color="primary"
             >
               Browse Resources
+            </Button>
+
+            <Button
+              component={RouterLink}
+              href={signUpHref}
+              variant="outlined"
+              size="large"
+              color="primary"
+            >
+              Join
             </Button>
           </Stack>
         </Stack>

@@ -16,11 +16,15 @@ import ListItemText from '@mui/material/ListItemText';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
+import { CONFIG } from 'src/config-global';
 import { RouterLink } from 'src/routes/components';
 import { usePathname } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { Logo } from 'src/components/logo';
+
+const signUpHref =
+  CONFIG.auth.method === 'supabase' ? paths.auth.supabase.signUp : paths.auth.jwt.signUp;
 
 // ----------------------------------------------------------------------
 
@@ -63,24 +67,44 @@ export function Header() {
 
             {/* Desktop Navigation */}
             {!isMobile && (
-              <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
-                {NAV_ITEMS.map((item) => (
-                  <Button
-                    key={item.title}
-                    component={RouterLink}
-                    href={item.path}
-                    sx={{
-                      color: isActive(item.path) ? 'primary.main' : 'text.primary',
-                      fontWeight: isActive(item.path) ? 600 : 400,
-                      '&:hover': {
-                        color: 'primary.main',
-                        bgcolor: 'transparent',
-                      },
-                    }}
-                  >
-                    {item.title}
-                  </Button>
-                ))}
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {NAV_ITEMS.map((item) => (
+                    <Button
+                      key={item.title}
+                      component={RouterLink}
+                      href={item.path}
+                      sx={{
+                        color: isActive(item.path) ? 'primary.main' : 'text.primary',
+                        fontWeight: isActive(item.path) ? 600 : 400,
+                        '&:hover': {
+                          color: 'primary.main',
+                          bgcolor: 'transparent',
+                        },
+                      }}
+                    >
+                      {item.title}
+                    </Button>
+                  ))}
+                </Box>
+                <Button
+                  component={RouterLink}
+                  href={signUpHref}
+                  variant="contained"
+                  color="primary"
+                  size="medium"
+                  sx={{ flexShrink: 0 }}
+                >
+                  Join
+                </Button>
               </Box>
             )}
 
@@ -88,6 +112,16 @@ export function Header() {
             {isMobile && (
               <>
                 <Box sx={{ flexGrow: 1 }} />
+                <Button
+                  component={RouterLink}
+                  href={signUpHref}
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  sx={{ mr: 1 }}
+                >
+                  Join
+                </Button>
                 <IconButton
                   color="inherit"
                   aria-label="open drawer"
@@ -140,6 +174,18 @@ export function Header() {
                 </ListItemButton>
               </ListItem>
             ))}
+            <ListItem disablePadding sx={{ mt: 2 }}>
+              <Button
+                component={RouterLink}
+                href={signUpHref}
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleDrawerToggle}
+              >
+                Join
+              </Button>
+            </ListItem>
           </List>
         </Box>
       </Drawer>

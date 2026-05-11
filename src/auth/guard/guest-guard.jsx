@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { CONFIG } from 'src/config-global';
-
-import { SplashScreen } from 'src/components/loading-screen';
 
 import { useAuthContext } from '../hooks';
 
@@ -19,31 +17,16 @@ export function GuestGuard({ children }) {
 
   const { loading, authenticated } = useAuthContext();
 
-  const [isChecking, setIsChecking] = useState(true);
-
   const returnTo = searchParams.get('returnTo') || CONFIG.auth.redirectPath;
 
-  const checkPermissions = async () => {
-    if (loading) {
-      return;
-    }
-
-    if (authenticated) {
-      router.replace(returnTo);
-      return;
-    }
-
-    setIsChecking(false);
-  };
-
   useEffect(() => {
-    checkPermissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, loading]);
+    if (!loading && authenticated) {
+      router.replace(returnTo);
+    }
+  }, [loading, authenticated, returnTo, router]);
 
-  if (isChecking) {
-    return <SplashScreen />;
-  }
-
+  // Render children immediately — no splash screen blocking the form.
+  // If the user is already authenticated the redirect above will fire
+  // once the auth check resolves in the background.
   return <>{children}</>;
 }

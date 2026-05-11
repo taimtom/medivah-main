@@ -6,6 +6,8 @@ import { useSetState } from 'src/hooks/use-set-state';
 
 import axios, { endpoints } from 'src/utils/axios';
 
+import { normalizeDashboardRole } from 'src/lib/role-capabilities';
+
 import { STORAGE_KEY } from './constant';
 import { AuthContext } from '../auth-context';
 import { setSession, isValidToken } from './utils';
@@ -55,7 +57,7 @@ export function AuthProvider({ children }) {
       user: state.user
         ? {
             ...state.user,
-            role: state.user?.role ?? 'admin',
+            role: normalizeDashboardRole(state.user?.role),
           }
         : null,
       checkUserSession,

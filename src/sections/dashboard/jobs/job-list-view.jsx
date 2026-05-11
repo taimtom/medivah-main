@@ -15,6 +15,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -29,12 +30,20 @@ import DialogContentText from '@mui/material/DialogContentText';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
+import { useAuthContext } from 'src/auth/hooks';
+import { scopeOwnedQuery } from 'src/lib/ownership';
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
 // ----------------------------------------------------------------------
 
 export function JobListView() {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [jobs, setJobs] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -44,19 +53,26 @@ export function JobListView() {
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const from = page * rowsPerPage;
+      const to = from + rowsPerPage - 1;
+      const query = scopeOwnedQuery(
+        supabase.from('jobs').select('*', { count: 'exact' }),
+        user?.role,
+        user?.id
+      )
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      const { data, error, count } = await query;
 
       if (error) throw error;
       setJobs(data || []);
+      setTotalCount(count ?? 0);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role, page, rowsPerPage]);
 
   useEffect(() => {
     fetchJobs();
@@ -88,13 +104,24 @@ export function JobListView() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase.from('jobs').delete().eq('id', selectedJob.id);
+      const { error } = await scopeOwnedQuery(
+        supabase.from('jobs').delete(),
+        user?.role,
+        user?.id
+      ).eq('id', selectedJob.id);
 
       if (error) throw error;
 
-      setJobs((prev) => prev.filter((job) => job.id !== selectedJob.id));
+      const nextTotal = Math.max(0, totalCount - 1);
+      const maxPage = Math.max(0, Math.ceil(nextTotal / rowsPerPage) - 1);
       setDeleteDialogOpen(false);
       setSelectedJob(null);
+      setTotalCount(nextTotal);
+      if (page > maxPage) {
+        setPage(maxPage);
+      } else {
+        await fetchJobs();
+      }
     } catch (error) {
       console.error('Error deleting job:', error);
       alert('Failed to delete job');
@@ -105,10 +132,11 @@ export function JobListView() {
 
   const handleTogglePublish = async (job) => {
     try {
-      const { error } = await supabase
-        .from('jobs')
-        .update({ published: !job.published })
-        .eq('id', job.id);
+      const { error } = await scopeOwnedQuery(
+        supabase.from('jobs').update({ published: !job.published }),
+        user?.role,
+        user?.id
+      ).eq('id', job.id);
 
       if (error) throw error;
 
@@ -119,6 +147,15 @@ export function JobListView() {
       console.error('Error toggling publish status:', error);
       alert('Failed to update job status');
     }
+  };
+
+  const handleChangePage = (_event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   return (
@@ -153,7 +190,7 @@ export function JobListView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {jobs.length === 0 && !loading ? (
+                {!loading && totalCount === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       <Box sx={{ py: 3 }}>
@@ -205,6 +242,15 @@ export function JobListView() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalCount}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          />
         </Card>
       </Stack>
 
@@ -225,7 +271,7 @@ export function JobListView() {
         <DialogTitle>Delete Job?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{selectedJob?.title}"? This action cannot be undone.
+            Are you sure you want to delete {selectedJob?.title}? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

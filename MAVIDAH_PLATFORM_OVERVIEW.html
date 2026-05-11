@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mavidah Platform — Owner Overview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f6fa;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    /* ── Cover ── */
+    .cover {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      padding: 70px 60px 60px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; }
+    .cover .sub { font-size: 1.15rem; color: #a8d8f0; margin-top: 10px; }
+    .cover .badge {
+      display: inline-block;
+      margin-top: 20px;
+      background: #e94560;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+    }
+
+    /* ── Page sections ── */
+    .page {
+      max-width: 960px;
+      margin: 50px auto;
+      padding: 0 30px;
+    }
+
+    /* ── Section headings ── */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #e94560;
+      margin-bottom: 6px;
+    }
+    h2 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+    .intro {
+      font-size: 1.05rem;
+      color: #555;
+      max-width: 680px;
+      margin-bottom: 40px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 2px solid #e8eaf0;
+      margin: 50px 0;
+    }
+
+    /* ── Flow Diagram ── */
+    .flow-wrap {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 36px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      margin-bottom: 50px;
+    }
+
+    .flow-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 30px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* Visitor journey row */
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin-bottom: 14px;
+    }
+
+    .flow-node {
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+      min-width: 120px;
+      max-width: 140px;
+      line-height: 1.3;
+      position: relative;
+    }
+
+    .flow-node.accent { background: #e94560; }
+    .flow-node.green  { background: #1b7a4e; }
+    .flow-node.blue   { background: #0a6dd9; }
+    .flow-node.purple { background: #6d3fa0; }
+    .flow-node.orange { background: #c85a00; }
+    .flow-node.teal   { background: #1e7f85; }
+    .flow-node.light  { background: #f0f2f8; color: #1a1a2e; border: 2px solid #d0d4e8; }
+
+    .arrow {
+      font-size: 1.2rem;
+      color: #aab0c8;
+      padding: 0 6px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .arrow-down {
+      display: flex;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #aab0c8;
+      margin: 4px 0;
+    }
+
+    /* Branch block */
+    .branch-block {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 10px 0 18px;
+    }
+
+    .branch-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .branch-line {
+      width: 2px;
+      height: 20px;
+      background: #aab0c8;
+      margin: 0 auto;
+    }
+
+    /* Admin flow */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .admin-card {
+      background: #f5f6fa;
+      border: 2px solid #dde1ee;
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    .admin-card .icon { font-size: 1.5rem; display: block; margin-bottom: 6px; }
+
+    /* legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: #555;
+    }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── Feature Cards ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 22px;
+      margin-top: 10px;
+    }
+
+    .feature-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 26px 24px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+      border-top: 4px solid #e94560;
+    }
+    .feature-card.blue-top  { border-top-color: #0a6dd9; }
+    .feature-card.green-top { border-top-color: #1b7a4e; }
+    .feature-card.purple-top{ border-top-color: #6d3fa0; }
+    .feature-card.orange-top{ border-top-color: #c85a00; }
+    .feature-card.teal-top  { border-top-color: #1e7f85; }
+    .feature-card.navy-top  { border-top-color: #1a1a2e; }
+
+    .feature-card .card-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .feature-card h3 { margin-bottom: 10px; }
+    .feature-card p  { font-size: 0.9rem; color: #555; margin-bottom: 10px; }
+    .feature-card ul { padding-left: 18px; }
+    .feature-card ul li { font-size: 0.88rem; color: #444; margin-bottom: 4px; }
+
+    /* ── How it all connects ── */
+    .funnel-box {
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 16px;
+      padding: 36px 36px;
+      margin: 40px 0;
+    }
+    .funnel-box h3 { color: #a8d8f0; margin-bottom: 18px; font-size: 1.1rem; }
+    .funnel-steps { display: flex; flex-direction: column; gap: 10px; }
+    .funnel-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+    .funnel-step .num {
+      background: #e94560;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 800;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .funnel-step .text { font-size: 0.9rem; color: #dde8f5; line-height: 1.5; }
+    .funnel-step .text strong { color: #fff; }
+
+    /* ── Integrations ── */
+    .integrations-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .int-chip {
+      background: #fff;
+      border: 2px solid #e0e4f0;
+      border-radius: 40px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .int-chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── Quick Reference Table ── */
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-top: 16px;
+    }
+    .ref-table th {
+      background: #1a1a2e;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 16px;
+      text-align: left;
+    }
+    .ref-table td {
+      padding: 11px 16px;
+      font-size: 0.88rem;
+      color: #444;
+      border-bottom: 1px solid #eef0f6;
+    }
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table tr:hover td { background: #f8f9fe; }
+
+    /* ── Footer ── */
+    .doc-footer {
+      background: #1a1a2e;
+      color: #8899b8;
+      text-align: center;
+      padding: 30px;
+      font-size: 0.8rem;
+      margin-top: 60px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .feature-card, .flow-wrap, .funnel-box { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="badge">Platform Overview — For Owners</div>
+  <h1>Mavidah</h1>
+  <p class="sub">HR Knowledge Platform &amp; Digital Product Marketplace — What it does &amp; how it works</p>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 1 — FLOW DIAGRAM & WHAT IS THIS?
+     ════════════════════════════════════════════ -->
+<div class="page">
+
+  <div class="section-label">Page 1 of 2</div>
+  <h2>What Is Mavidah?</h2>
+  <p class="intro">
+    Mavidah is your all-in-one digital platform for HR knowledge, career content, and digital products.
+    It serves your audience with valuable content while automatically building your newsletter list and
+    generating revenue — all from one place you control.
+  </p>
+
+  <!-- ── FLOW DIAGRAM ── -->
+  <div class="flow-wrap">
+    <p class="flow-title">HOW VISITORS EXPERIENCE MAVIDAH — The Customer Journey</p>
+
+    <!-- Step 1: Visitor arrives -->
+    <div class="flow-row">
+      <div class="flow-node light">👤 Visitor Arrives<br/><span style="font-weight:400;font-size:0.75rem">from Google, social, or referral</span></div>
+    </div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Step 2: They explore -->
+    <div class="flow-row" style="gap:10px">
+      <div class="flow-node blue">📰 Reads a<br/>Blog Post</div>
+      <div class="arrow">or</div>
+      <div class="flow-node teal">📦 Browses<br/>Resources</div>
+      <div class="arrow">or</div>
+      <div class="flow-node purple">💼 Views<br/>Job Board</div>
+    </div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Step 3: Engagement hooks -->
+    <p style="text-align:center;font-size:0.78rem;color:#888;margin-bottom:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Engagement Hooks (automatic)</p>
+    <div class="branch-block">
+      <div class="branch-item">
+        <div class="branch-line"></div>
+        <div class="flow-node accent" style="font-size:0.75rem">👍 Likes / Dislikes<br/><span style="font-weight:400">asks for email</span></div>
+      </div>
+      <div class="branch-item">
+        <div class="branch-line"></div>
+        <div class="flow-node accent" style="font-size:0.75rem">🔒 Paywalled<br/>Article Section<br/><span style="font-weight:400">subscribe to read</span></div>
+      </div>
+      <div class="branch-item">
+        <div class="branch-line"></div>
+        <div class="flow-node accent" style="font-size:0.75rem">💬 Leaves a<br/>Comment<br/><span style="font-weight:400">optional email</span></div>
+      </div>
+      <div class="branch-item">
+        <div class="branch-line"></div>
+        <div class="flow-node accent" style="font-size:0.75rem">📩 Footer<br/>Subscribe Form<br/><span style="font-weight:400">newsletter sign-up</span></div>
+      </div>
+    </div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Step 4: Email captured -->
+    <div class="flow-row">
+      <div class="flow-node green">✅ Email Added to<br/>Newsletter List</div>
+    </div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Step 5: Product purchase -->
+    <div class="flow-row" style="gap:10px">
+      <div class="flow-node orange">🛒 Buys a Digital<br/>Product (Paystack)</div>
+      <div class="arrow">→</div>
+      <div class="flow-node green">📧 Gets Confirmation<br/>Email + Download Link</div>
+    </div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Step 6: You re-engage -->
+    <div class="flow-row">
+      <div class="flow-node navy-top" style="background:#0f3460;min-width:200px;max-width:260px">📬 You Send Newsletters<br/><span style="font-weight:400;font-size:0.75rem">keep audience coming back with new content &amp; offers</span></div>
+    </div>
+
+    <!-- ADMIN SIDE -->
+    <hr style="border:none;border-top:2px dashed #dde1ee;margin:30px 0 24px"/>
+    <p class="flow-title" style="margin-bottom:14px">YOUR ADMIN DASHBOARD — What You Control</p>
+    <div class="admin-grid">
+      <div class="admin-card"><span class="icon">📝</span>Write &amp; Publish<br/>Blog Posts</div>
+      <div class="admin-card"><span class="icon">📦</span>Upload &amp; Sell<br/>Digital Products</div>
+      <div class="admin-card"><span class="icon">💼</span>Post &amp; Manage<br/>Job Listings</div>
+      <div class="admin-card"><span class="icon">💬</span>Approve / Remove<br/>Comments</div>
+      <div class="admin-card"><span class="icon">🛍️</span>View All<br/>Orders</div>
+      <div class="admin-card"><span class="icon">📬</span>Create &amp; Send<br/>Newsletters</div>
+      <div class="admin-card"><span class="icon">👥</span>Manage<br/>Subscribers</div>
+      <div class="admin-card"><span class="icon">📊</span>Analytics<br/>Overview</div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#0a6dd9"></div>Visitor reads content</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div>Automatic email capture</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1b7a4e"></div>Subscriber / order confirmed</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c85a00"></div>Revenue event</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f0f2f8;border:2px solid #aab0c8"></div>External visitor</div>
+    </div>
+  </div>
+
+  <!-- HOW IT ALL CONNECTS -->
+  <div class="funnel-box">
+    <h3>The Big Picture — How Everything Connects</h3>
+    <div class="funnel-steps">
+      <div class="funnel-step">
+        <div class="num">1</div>
+        <div class="text"><strong>Content attracts visitors.</strong> Blog posts, the job board, and resources bring people to your site through search engines and social sharing.</div>
+      </div>
+      <div class="funnel-step">
+        <div class="num">2</div>
+        <div class="text"><strong>Smart hooks capture emails.</strong> Every interaction — liking a post, reading a locked article, downloading a free resource — asks for an email address and adds it to your newsletter list automatically.</div>
+      </div>
+      <div class="funnel-step">
+        <div class="num">3</div>
+        <div class="text"><strong>Digital products generate revenue.</strong> Products (templates, guides, courses) can be free (email-gated) or paid. Paystack handles all payments in Nigerian Naira (NGN). Download links are sent automatically after purchase.</div>
+      </div>
+      <div class="funnel-step">
+        <div class="num">4</div>
+        <div class="text"><strong>Newsletters keep your audience engaged.</strong> You can send emails to your entire subscriber base, track who opens them and clicks links, and schedule sends in advance.</div>
+      </div>
+      <div class="funnel-step">
+        <div class="num">5</div>
+        <div class="text"><strong>Analytics show you what's working.</strong> The dashboard gives you real-time stats — how many blog posts, products, jobs, orders, likes, and comments you have — all in one screen.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page 1 -->
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 2 — FEATURE BREAKDOWN
+     ════════════════════════════════════════════ -->
+<div class="page">
+
+  <hr class="divider" style="margin-top:0"/>
+  <div class="section-label">Page 2 of 2</div>
+  <h2>Feature-by-Feature Guide</h2>
+  <p class="intro">Everything your platform can do, explained simply.</p>
+
+  <div class="feature-grid">
+
+    <!-- Blog -->
+    <div class="feature-card">
+      <span class="card-icon">📰</span>
+      <h3>Blog / Knowledge Centre</h3>
+      <p>Your main content area. Publish articles on HR, career growth, workplace culture, leadership, and recruitment.</p>
+      <ul>
+        <li>Write and publish articles with a visual editor (no coding needed)</li>
+        <li>Organise by category and tags</li>
+        <li>Add a featured image per post</li>
+        <li>Set any article as a <strong>Draft</strong> (hidden) or <strong>Published</strong> (live)</li>
+        <li>Lock the bottom half of any article behind a newsletter sign-up gate</li>
+        <li>Readers can like, dislike, and comment on posts</li>
+        <li>Easy share buttons on every article</li>
+      </ul>
+    </div>
+
+    <!-- Resources / Products -->
+    <div class="feature-card blue-top">
+      <span class="card-icon">📦</span>
+      <h3>Resources &amp; Digital Products</h3>
+      <p>Sell or give away templates, guides, courses, and research reports — all delivered digitally.</p>
+      <ul>
+        <li>Upload any file (PDF, Word, ZIP, etc.) securely to private storage</li>
+        <li>Set a price in Naira (NGN) or mark as <strong>Free</strong></li>
+        <li>Free products require only an email address to access</li>
+        <li>Paid products use Paystack — the buyer pays, gets an email with a secure download link</li>
+        <li>Download links automatically expire after 7 days for security</li>
+        <li>Organise by category: Templates, Guides, Courses, Research</li>
+      </ul>
+    </div>
+
+    <!-- Jobs Board -->
+    <div class="feature-card green-top">
+      <span class="card-icon">💼</span>
+      <h3>Job Board</h3>
+      <p>Post career opportunities for your audience to browse, filter, and apply to.</p>
+      <ul>
+        <li>Add job title, company, location, job type, and experience level</li>
+        <li>Include salary range (optional)</li>
+        <li>Write the full description and requirements using the visual editor</li>
+        <li>Set an expiry date per listing</li>
+        <li>Applicants can apply via email or an external link</li>
+        <li>Visitors can search and filter by job type or experience level</li>
+      </ul>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="feature-card purple-top">
+      <span class="card-icon">📬</span>
+      <h3>Newsletter &amp; Email Marketing</h3>
+      <p>Build and communicate directly with your audience via email.</p>
+      <ul>
+        <li>Compose newsletters using a visual email editor</li>
+        <li>Schedule sends for a future date and time</li>
+        <li>See who opened your emails and which links they clicked</li>
+        <li>Subscribers are collected automatically from every sign-up point on the site</li>
+        <li>Every email has an automatic unsubscribe link (legally required)</li>
+        <li>Manage subscribers — view, filter by status (active, unsubscribed)</li>
+        <li>See where subscribers came from (article, product, footer form)</li>
+      </ul>
+    </div>
+
+    <!-- Comments -->
+    <div class="feature-card orange-top">
+      <span class="card-icon">💬</span>
+      <h3>Comments &amp; Community</h3>
+      <p>Let readers engage with your content through threaded comments on blog posts.</p>
+      <ul>
+        <li>Readers can post comments and reply to each other</li>
+        <li>Comments are visible immediately when posted</li>
+        <li>You can <strong>Approve, Reject, Mark as Spam, or Delete</strong> any comment from the dashboard</li>
+        <li>Email address is optional for commenters (but helpful for follow-up)</li>
+      </ul>
+    </div>
+
+    <!-- Orders -->
+    <div class="feature-card teal-top">
+      <span class="card-icon">🛍️</span>
+      <h3>Orders &amp; Payments</h3>
+      <p>Track every product purchase in one place.</p>
+      <ul>
+        <li>See all orders: customer email, product bought, amount paid, date</li>
+        <li>Each order has a unique Paystack reference for reconciliation</li>
+        <li>Order confirmation emails are sent to buyers automatically</li>
+        <li>All payments are processed in Nigerian Naira (NGN) via Paystack</li>
+      </ul>
+    </div>
+
+    <!-- Analytics -->
+    <div class="feature-card navy-top">
+      <span class="card-icon">📊</span>
+      <h3>Dashboard &amp; Analytics</h3>
+      <p>A bird's-eye view of your entire platform at a glance.</p>
+      <ul>
+        <li>Total blog posts, products, jobs, orders, comments, and likes</li>
+        <li>Newsletter performance: opens, clicks, and delivery stats</li>
+        <li>Google Analytics tracking built in — see traffic data in Google's dashboard</li>
+        <li>All data updates in real time as your audience interacts with the site</li>
+      </ul>
+    </div>
+
+    <!-- Contact -->
+    <div class="feature-card">
+      <span class="card-icon">✉️</span>
+      <h3>Contact Form</h3>
+      <p>Let potential clients, partners, or readers reach you directly.</p>
+      <ul>
+        <li>Visitors fill in their name, email, subject, and message</li>
+        <li>Message lands in your inbox immediately via email</li>
+        <li>Reply directly to the sender — their email is pre-filled as the reply address</li>
+      </ul>
+    </div>
+
+  </div><!-- /feature-grid -->
+
+  <!-- QUICK REFERENCE TABLE -->
+  <h2 style="margin-top:50px">Quick Reference — Who Does What</h2>
+  <p class="intro" style="margin-bottom:16px">A plain-English summary of what you (the owner) do vs. what visitors do.</p>
+
+  <table class="ref-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>What You (Owner) Do</th>
+        <th>What Visitors Do</th>
+        <th>What Happens Automatically</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Blog Posts</strong></td>
+        <td>Write &amp; publish articles in the dashboard</td>
+        <td>Read, like/dislike, comment, share</td>
+        <td>Likes ask for email &amp; auto-subscribe readers</td>
+      </tr>
+      <tr>
+        <td><strong>Resources</strong></td>
+        <td>Upload file, set price, write description</td>
+        <td>Browse, checkout (free or paid)</td>
+        <td>Confirmation email + download link sent; buyer added to newsletter</td>
+      </tr>
+      <tr>
+        <td><strong>Jobs</strong></td>
+        <td>Post job details &amp; set expiry date</td>
+        <td>Search, filter, click Apply</td>
+        <td>Nothing — jobs are purely informational</td>
+      </tr>
+      <tr>
+        <td><strong>Newsletter</strong></td>
+        <td>Write &amp; send or schedule email campaigns</td>
+        <td>Sign up, read, click unsubscribe</td>
+        <td>Open &amp; click tracking recorded; list grows from all site activity</td>
+      </tr>
+      <tr>
+        <td><strong>Comments</strong></td>
+        <td>Review &amp; moderate in dashboard</td>
+        <td>Comment &amp; reply on blog posts</td>
+        <td>Comments go live immediately; you can action them anytime</td>
+      </tr>
+      <tr>
+        <td><strong>Orders</strong></td>
+        <td>View order history in dashboard</td>
+        <td>Pay via Paystack popup</td>
+        <td>Order recorded, download link emailed, Paystack handles money</td>
+      </tr>
+      <tr>
+        <td><strong>Contact Form</strong></td>
+        <td>Reply to messages in your email inbox</td>
+        <td>Submit name, email, message</td>
+        <td>Email forwarded to your inbox instantly</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- INTEGRATIONS -->
+  <h2 style="margin-top:50px">Platforms &amp; Services Connected</h2>
+  <p class="intro" style="margin-bottom:0">These are the third-party tools your platform relies on. You need active accounts with each.</p>
+  <div class="integrations-row">
+    <div class="int-chip"><div class="dot" style="background:#1b7a4e"></div><strong>Supabase</strong> — Database &amp; file storage</div>
+    <div class="int-chip"><div class="dot" style="background:#e94560"></div><strong>Resend</strong> — Sends all emails</div>
+    <div class="int-chip"><div class="dot" style="background:#0a6dd9"></div><strong>Paystack</strong> — Handles payments</div>
+    <div class="int-chip"><div class="dot" style="background:#f4a400"></div><strong>Google Analytics</strong> — Website traffic data</div>
+    <div class="int-chip"><div class="dot" style="background:#1a1a2e"></div><strong>Vercel</strong> — Website hosting</div>
+  </div>
+
+</div><!-- /page 2 -->
+
+<div class="doc-footer">
+  Mavidah Platform Overview &nbsp;·&nbsp; Prepared for the Platform Owner &nbsp;·&nbsp; March 2026
+</div>
+
+</body>
+</html>

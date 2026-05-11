@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendOrderConfirmationEmail } from 'src/lib/email/resend';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { computeCommissionSplit } from 'src/lib/financial-config';
+import { createServerClient } from 'src/lib/supabase';
 
 export async function POST(request) {
+  const supabase = createServerClient();
   try {
     const { product_id, customer_email, amount, paystack_reference } = await request.json();
 
@@ -17,6 +14,14 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    const { data: productMeta } = await supabase
+      .from('products')
+      .select('id, name, file_url, member_id')
+      .eq('id', product_id)
+      .single();
+
+    const split = computeCommissionSplit(amount);
 
     // Create order in database
     const { data, error } = await supabase
@@ -28,12 +33,44 @@ export async function POST(request) {
           amount,
           paystack_reference,
           status: 'completed',
+          order_type: 'resource_purchase',
+          resource_member_id: productMeta?.member_id || null,
         },
       ])
       .select()
       .single();
 
     if (error) throw error;
+
+    if (productMeta?.member_id) {
+      const { data: splitRow, error: splitError } = await supabase
+        .from('order_commission_splits')
+        .insert([
+          {
+            order_id: data.id,
+            member_id: productMeta.member_id,
+            gross_amount: split.grossAmount,
+            platform_commission_rate: Number(process.env.NEXT_PUBLIC_PLATFORM_COMMISSION_RATE || 0.2),
+            platform_amount: split.platformAmount,
+            member_amount: split.memberAmount,
+            currency: 'NGN',
+          },
+        ])
+        .select('*')
+        .single();
+
+      if (!splitError && splitRow) {
+        await supabase.from('member_earnings_ledger').insert([
+          {
+            member_id: productMeta.member_id,
+            order_id: data.id,
+            commission_split_id: splitRow.id,
+            amount: split.memberAmount,
+            status: 'pending',
+          },
+        ]);
+      }
+    }
 
     // Auto-subscribe customer to newsletter
     try {
@@ -81,11 +118,8 @@ export async function POST(request) {
     // Get product details and generate signed URL for download
     let downloadUrl = null;
     try {
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('name, file_url')
-        .eq('id', product_id)
-        .single();
+        const product = productMeta;
+      const productError = null;
 
       if (!productError && product && product.file_url) {
         if (product.file_url.startsWith('products/')) {
@@ -109,7 +143,7 @@ export async function POST(request) {
           customerEmail: customer_email,
           customerName: customer_email.split('@')[0], // Use email username as fallback
           productName: product.name,
-          amount: amount,
+          amount,
           downloadLink: downloadUrl,
         });
 

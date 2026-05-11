@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { MainLayout } from 'src/layouts/main';
 import Box from '@mui/material/Box';
@@ -17,6 +18,7 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
+import Pagination from '@mui/material/Pagination';
 
 import { Iconify } from 'src/components/iconify';
 import { RouterLink } from 'src/routes/components';
@@ -26,23 +28,54 @@ import { supabase } from 'src/lib/supabase';
 // ----------------------------------------------------------------------
 
 const CATEGORIES = ['All', 'HR Basics', 'Career Growth', 'Workplace Culture', 'Leadership', 'Recruitment'];
+const ITEMS_PER_PAGE = 9;
 
 // ----------------------------------------------------------------------
 
 export function BlogListView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [blogs, setBlogs] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  const rawPageParam = searchParams.get('page');
+  const pageParam = Number(rawPageParam || '1');
+  const hasInvalidPageParam = rawPageParam !== null && (Number.isNaN(pageParam) || pageParam < 1);
+  const currentPage = hasInvalidPageParam ? 1 : pageParam;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const updatePageInUrl = useCallback(
+    (page) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (page <= 1) {
+        params.delete('page');
+      } else {
+        params.set('page', String(page));
+      }
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
   const fetchBlogs = useCallback(async () => {
     try {
       setLoading(true);
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE - 1;
+
       let query = supabase
         .from('blogs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('published', true)
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false })
+        .range(start, end);
 
       if (selectedCategory !== 'All') {
         query = query.eq('category', selectedCategory);
@@ -52,20 +85,61 @@ export function BlogListView() {
         query = query.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`);
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query;
 
       if (error) throw error;
+
+      const safeTotalCount = count ?? 0;
+      const safeTotalPages = Math.max(1, Math.ceil(safeTotalCount / ITEMS_PER_PAGE));
+
+      if (safeTotalCount > 0 && currentPage > safeTotalPages) {
+        updatePageInUrl(safeTotalPages);
+        return;
+      }
+
+      if (safeTotalCount === 0 && currentPage !== 1) {
+        updatePageInUrl(1);
+        return;
+      }
+
       setBlogs(data || []);
+      setTotalCount(safeTotalCount);
     } catch (error) {
       console.error('Error fetching blogs:', error);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory]);
+  }, [currentPage, searchQuery, selectedCategory, updatePageInUrl]);
 
   useEffect(() => {
     fetchBlogs();
   }, [fetchBlogs]);
+
+  useEffect(() => {
+    if (hasInvalidPageParam) {
+      updatePageInUrl(1);
+    }
+  }, [hasInvalidPageParam, updatePageInUrl]);
+
+  const handleSearchChange = useCallback(
+    (event) => {
+      setSearchQuery(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
+
+  const handleCategoryChange = useCallback(
+    (event) => {
+      setSelectedCategory(event.target.value);
+      if (currentPage !== 1) {
+        updatePageInUrl(1);
+      }
+    },
+    [currentPage, updatePageInUrl]
+  );
 
   return (
     <MainLayout>
@@ -90,7 +164,7 @@ export function BlogListView() {
               fullWidth
               placeholder="Search posts..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -103,7 +177,7 @@ export function BlogListView() {
             <TextField
               select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={handleCategoryChange}
               sx={{ minWidth: 200 }}
             >
               {CATEGORIES.map((category) => (
@@ -127,66 +201,79 @@ export function BlogListView() {
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
-            {blogs.map((blog) => (
-              <Grid item xs={12} sm={6} md={4} key={blog.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <CardActionArea
-                    component={RouterLink}
-                    href={paths.blog.post(blog.slug)}
-                    sx={{ flexGrow: 1 }}
-                  >
-                    {blog.featured_image && (
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={blog.featured_image}
-                        alt={blog.title}
-                      />
-                    )}
-                    <CardContent>
-                      <Stack spacing={2}>
-                        {blog.category && (
-                          <Chip
-                            label={blog.category}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ width: 'fit-content' }}
-                          />
-                        )}
-                        <Typography variant="h6" gutterBottom>
-                          {blog.title}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {blog.excerpt}
-                        </Typography>
-                        {blog.published_at && (
-                          <Typography variant="caption" color="text.disabled">
-                            {new Date(blog.published_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
+          <Stack spacing={4}>
+            <Grid container spacing={3}>
+              {blogs.map((blog) => (
+                <Grid item xs={12} sm={6} md={4} key={blog.id}>
+                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <CardActionArea
+                      component={RouterLink}
+                      href={paths.blog.post(blog.slug)}
+                      sx={{ flexGrow: 1 }}
+                    >
+                      {blog.featured_image && (
+                        <CardMedia
+                          component="img"
+                          height="200"
+                          image={blog.featured_image}
+                          alt={blog.title}
+                        />
+                      )}
+                      <CardContent>
+                        <Stack spacing={2}>
+                          {blog.category && (
+                            <Chip
+                              label={blog.category}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ width: 'fit-content' }}
+                            />
+                          )}
+                          <Typography variant="h6" gutterBottom>
+                            {blog.title}
                           </Typography>
-                        )}
-                      </Stack>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {blog.excerpt}
+                          </Typography>
+                          {blog.published_at && (
+                            <Typography variant="caption" color="text.disabled">
+                              {new Date(blog.published_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {totalPages > 1 && (
+              <Stack alignItems="center">
+                <Pagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={(_, page) => updatePageInUrl(page)}
+                  color="primary"
+                />
+              </Stack>
+            )}
+          </Stack>
         )}
       </Container>
     </Box>

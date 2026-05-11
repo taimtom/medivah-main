@@ -15,6 +15,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -29,12 +30,20 @@ import DialogContentText from '@mui/material/DialogContentText';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
+import { scopeOwnedQuery } from 'src/lib/ownership';
+import { useAuthContext } from 'src/auth/hooks';
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
 // ----------------------------------------------------------------------
 
 export function BlogListView() {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [blogs, setBlogs] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBlog, setSelectedBlog] = useState(null);
@@ -44,19 +53,23 @@ export function BlogListView() {
   const fetchBlogs = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('blogs')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const from = page * rowsPerPage;
+      const to = from + rowsPerPage - 1;
+      const baseQuery = supabase.from('blogs').select('*', { count: 'exact' });
+      const query = scopeOwnedQuery(baseQuery, user?.role, user?.id)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      const { data: rows, error, count } = await query;
 
       if (error) throw error;
-      setBlogs(data || []);
+      setBlogs(rows || []);
+      setTotalCount(count ?? 0);
     } catch (error) {
       console.error('Error fetching blogs:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role, page, rowsPerPage]);
 
   useEffect(() => {
     fetchBlogs();
@@ -88,13 +101,25 @@ export function BlogListView() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase.from('blogs').delete().eq('id', selectedBlog.id);
+      const deleteQuery = scopeOwnedQuery(
+        supabase.from('blogs').delete(),
+        user?.role,
+        user?.id
+      ).eq('id', selectedBlog.id);
+      const { error } = await deleteQuery;
 
       if (error) throw error;
 
-      setBlogs((prev) => prev.filter((blog) => blog.id !== selectedBlog.id));
+      const nextTotal = Math.max(0, totalCount - 1);
+      const maxPage = Math.max(0, Math.ceil(nextTotal / rowsPerPage) - 1);
       setDeleteDialogOpen(false);
       setSelectedBlog(null);
+      setTotalCount(nextTotal);
+      if (page > maxPage) {
+        setPage(maxPage);
+      } else {
+        await fetchBlogs();
+      }
     } catch (error) {
       console.error('Error deleting blog:', error);
       alert('Failed to delete blog');
@@ -105,10 +130,12 @@ export function BlogListView() {
 
   const handleTogglePublish = async (blog) => {
     try {
-      const { error } = await supabase
-        .from('blogs')
-        .update({ published: !blog.published })
-        .eq('id', blog.id);
+      const publishQuery = scopeOwnedQuery(
+        supabase.from('blogs').update({ published: !blog.published }),
+        user?.role,
+        user?.id
+      ).eq('id', blog.id);
+      const { error } = await publishQuery;
 
       if (error) throw error;
 
@@ -119,6 +146,15 @@ export function BlogListView() {
       console.error('Error toggling publish status:', error);
       alert('Failed to update blog status');
     }
+  };
+
+  const handleChangePage = (_event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   return (
@@ -151,7 +187,7 @@ export function BlogListView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {blogs.length === 0 && !loading ? (
+                {!loading && totalCount === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center">
                       <Box sx={{ py: 3 }}>
@@ -202,6 +238,15 @@ export function BlogListView() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalCount}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          />
         </Card>
       </Stack>
 
@@ -222,7 +267,7 @@ export function BlogListView() {
         <DialogTitle>Delete Blog Post?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{selectedBlog?.title}"? This action cannot be undone.
+            Are you sure you want to delete {selectedBlog?.title}? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

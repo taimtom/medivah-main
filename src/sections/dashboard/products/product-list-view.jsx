@@ -15,6 +15,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -29,12 +30,20 @@ import DialogContentText from '@mui/material/DialogContentText';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
+import { useAuthContext } from 'src/auth/hooks';
+import { scopeOwnedQuery } from 'src/lib/ownership';
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
 // ----------------------------------------------------------------------
 
 export function ProductListView() {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -44,19 +53,25 @@ export function ProductListView() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const from = page * rowsPerPage;
+      const to = from + rowsPerPage - 1;
+      const { data, error, count } = await scopeOwnedQuery(
+        supabase.from('products').select('*', { count: 'exact' }),
+        user?.role,
+        user?.id
+      )
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
       setProducts(data || []);
+      setTotalCount(count ?? 0);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role, page, rowsPerPage]);
 
   useEffect(() => {
     fetchProducts();
@@ -88,13 +103,24 @@ export function ProductListView() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase.from('products').delete().eq('id', selectedProduct.id);
+      const { error } = await scopeOwnedQuery(
+        supabase.from('products').delete(),
+        user?.role,
+        user?.id
+      ).eq('id', selectedProduct.id);
 
       if (error) throw error;
 
-      setProducts((prev) => prev.filter((product) => product.id !== selectedProduct.id));
+      const nextTotal = Math.max(0, totalCount - 1);
+      const maxPage = Math.max(0, Math.ceil(nextTotal / rowsPerPage) - 1);
       setDeleteDialogOpen(false);
       setSelectedProduct(null);
+      setTotalCount(nextTotal);
+      if (page > maxPage) {
+        setPage(maxPage);
+      } else {
+        await fetchProducts();
+      }
     } catch (error) {
       console.error('Error deleting product:', error);
       alert('Failed to delete product');
@@ -105,10 +131,11 @@ export function ProductListView() {
 
   const handleTogglePublish = async (product) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({ published: !product.published })
-        .eq('id', product.id);
+      const { error } = await scopeOwnedQuery(
+        supabase.from('products').update({ published: !product.published }),
+        user?.role,
+        user?.id
+      ).eq('id', product.id);
 
       if (error) throw error;
 
@@ -121,12 +148,20 @@ export function ProductListView() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
       minimumFractionDigits: 0,
     }).format(price);
+
+  const handleChangePage = (_event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   return (
@@ -160,7 +195,7 @@ export function ProductListView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {products.length === 0 && !loading ? (
+                {!loading && totalCount === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       <Box sx={{ py: 3 }}>
@@ -218,6 +253,15 @@ export function ProductListView() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalCount}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          />
         </Card>
       </Stack>
 
@@ -238,7 +282,7 @@ export function ProductListView() {
         <DialogTitle>Delete Product?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+            Are you sure you want to delete {selectedProduct?.name}? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

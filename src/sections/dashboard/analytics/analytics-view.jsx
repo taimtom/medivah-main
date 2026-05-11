@@ -16,13 +16,40 @@ import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 
 import { Iconify } from 'src/components/iconify';
-import { supabase } from 'src/lib/supabase';
-import { getEngagementAnalytics } from 'src/lib/supabase/blog-engagement';
+import { useAuthContext } from 'src/auth/hooks';
 import { AnalyticsWidgetSummary } from './analytics-widget-summary';
 
 // ----------------------------------------------------------------------
 
+const EMPTY_STATS = {
+  totalBlogs: 0,
+  publishedBlogs: 0,
+  totalProducts: 0,
+  publishedProducts: 0,
+  totalJobs: 0,
+  activeJobs: 0,
+  totalOrders: 0,
+  totalRevenue: 0,
+  creditsPurchased: 0,
+  creditsUsed: 0,
+  netEarnings: 0,
+  applicationsSubmitted: 0,
+  profileCompletionRate: 0,
+  applicationsPerApplicant: 0,
+  applicationConversionRate: 0,
+};
+
+const EMPTY_ENGAGEMENT = {
+  totalLikes: 0,
+  totalDislikes: 0,
+  totalComments: 0,
+  pendingComments: 0,
+  topLikedBlogs: [],
+  topLikers: [],
+};
+
 export function AnalyticsView() {
+  const { user, loading: authLoading } = useAuthContext();
   const [stats, setStats] = useState({
     totalBlogs: 0,
     publishedBlogs: 0,
@@ -32,6 +59,13 @@ export function AnalyticsView() {
     activeJobs: 0,
     totalOrders: 0,
     totalRevenue: 0,
+    creditsPurchased: 0,
+    creditsUsed: 0,
+    netEarnings: 0,
+    applicationsSubmitted: 0,
+    profileCompletionRate: 0,
+    applicationsPerApplicant: 0,
+    applicationConversionRate: 0,
   });
   const [engagementStats, setEngagementStats] = useState({
     totalLikes: 0,
@@ -44,150 +78,58 @@ export function AnalyticsView() {
   const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    if (authLoading) return undefined;
 
-  const fetchAnalytics = async () => {
-    setLoading(true);
-
-    try {
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn('Supabase not configured. Using default values.');
-        setStats({
-          totalBlogs: 0,
-          publishedBlogs: 0,
-          totalProducts: 0,
-          publishedProducts: 0,
-          totalJobs: 0,
-          activeJobs: 0,
-          totalOrders: 0,
-          totalRevenue: 0,
-        });
-        setRecentActivity([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch blog stats
-      const { count: totalBlogs } = await supabase
-        .from('blogs')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: publishedBlogs } = await supabase
-        .from('blogs')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
-
-      // Fetch product stats
-      const { count: totalProducts } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: publishedProducts } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
-
-      // Fetch job stats
-      const { count: totalJobs } = await supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: activeJobs } = await supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
-
-      // Fetch order stats
-      const { count: totalOrders } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true });
-
-      // Calculate total revenue
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('amount')
-        .eq('status', 'completed');
-
-      const totalRevenue = orders?.reduce((sum, order) => sum + (order.amount || 0), 0) || 0;
-
-      // Fetch recent activity (latest blogs, products, jobs)
-      const { data: recentBlogs } = await supabase
-        .from('blogs')
-        .select('id, title, created_at')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      const { data: recentProducts } = await supabase
-        .from('products')
-        .select('id, name, created_at')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      const { data: recentJobs } = await supabase
-        .from('jobs')
-        .select('id, title, created_at')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      // Combine recent activity
-      const activity = [
-        ...(recentBlogs || []).map((item) => ({ ...item, type: 'blog' })),
-        ...(recentProducts || []).map((item) => ({ ...item, type: 'product', name: item.name })),
-        ...(recentJobs || []).map((item) => ({ ...item, type: 'job' })),
-      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5);
-
-      setStats({
-        totalBlogs: totalBlogs || 0,
-        publishedBlogs: publishedBlogs || 0,
-        totalProducts: totalProducts || 0,
-        publishedProducts: publishedProducts || 0,
-        totalJobs: totalJobs || 0,
-        activeJobs: activeJobs || 0,
-        totalOrders: totalOrders || 0,
-        totalRevenue,
-      });
-
-      setRecentActivity(activity);
-
-      // Fetch engagement analytics
-      const engagement = await getEngagementAnalytics();
-      setEngagementStats(engagement);
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-      // Set default values on error
-      setStats({
-        totalBlogs: 0,
-        publishedBlogs: 0,
-        totalProducts: 0,
-        publishedProducts: 0,
-        totalJobs: 0,
-        activeJobs: 0,
-        totalOrders: 0,
-        totalRevenue: 0,
-      });
-      setEngagementStats({
-        totalLikes: 0,
-        totalDislikes: 0,
-        totalComments: 0,
-        pendingComments: 0,
-        topLikedBlogs: [],
-      });
+    if (!user?.id) {
+      setStats(EMPTY_STATS);
+      setEngagementStats(EMPTY_ENGAGEMENT);
       setRecentActivity([]);
-    } finally {
       setLoading(false);
+      return undefined;
     }
-  };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NG', {
+    const ac = new AbortController();
+
+    (async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          role: user.role || 'member',
+          memberId: user.id,
+        });
+        const response = await fetch(`/api/dashboard/analytics/summary?${params.toString()}`, {
+          signal: ac.signal,
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || 'Failed to load analytics');
+
+        setStats(body.stats);
+        setRecentActivity(body.recentActivity || []);
+        setEngagementStats({
+          ...EMPTY_ENGAGEMENT,
+          ...body.engagement,
+          topLikedBlogs: body.engagement?.topLikedBlogs || [],
+        });
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        console.error('Error fetching analytics:', error);
+        setStats(EMPTY_STATS);
+        setEngagementStats(EMPTY_ENGAGEMENT);
+        setRecentActivity([]);
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => ac.abort();
+  }, [authLoading, user?.id, user?.role]);
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -215,7 +157,7 @@ export function AnalyticsView() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Box sx={{ width: '100%' }}>
@@ -226,6 +168,71 @@ export function AnalyticsView() {
   }
 
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isApplicant = user?.role === 'applicant';
+
+  if (isApplicant) {
+    const breakdown = stats.applicationStatusBreakdown || {};
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Stack spacing={3}>
+          <Typography variant="h4">My Dashboard</Typography>
+          {!isSupabaseConfigured && (
+            <Alert severity="warning">
+              <AlertTitle>Database Not Configured</AlertTitle>
+              Supabase is not configured. Add credentials to .env.local.
+            </Alert>
+          )}
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Applications Submitted"
+                total={stats.applicationsSubmitted}
+                icon="solar:document-add-bold-duotone"
+                color="info"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Saved Jobs"
+                total={stats.savedJobs || 0}
+                icon="solar:bookmark-bold-duotone"
+                color="warning"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Profile Completion"
+                total={stats.profileCompletionRate}
+                icon="solar:user-check-bold-duotone"
+                color={stats.profileCompletionRate >= 70 ? 'success' : 'error'}
+                subtitle={stats.profileCompletionRate < 50 ? 'Complete profile to apply' : undefined}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Shortlisted / Interviews"
+                total={(breakdown.shortlisted || 0) + (breakdown.interview || 0)}
+                icon="solar:star-bold-duotone"
+                color="success"
+              />
+            </Grid>
+          </Grid>
+          {Object.keys(breakdown).length > 0 && (
+            <Card>
+              <CardHeader title="Applications by Status" />
+              <CardContent>
+                <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
+                  {Object.entries(breakdown).map(([status, count]) => (
+                    <Chip key={status} label={`${status}: ${count}`} size="small" variant="outlined" />
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
+        </Stack>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -286,6 +293,46 @@ export function AnalyticsView() {
               icon="solar:dollar-minimalistic-bold-duotone"
               color="error"
               subtitle={formatCurrency(stats.totalRevenue)}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AnalyticsWidgetSummary
+              title="Credits Purchased"
+              total={stats.creditsPurchased}
+              icon="solar:ticket-bold-duotone"
+              color="primary"
+              subtitle={`${stats.creditsUsed} used`}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AnalyticsWidgetSummary
+              title="Net Earnings"
+              total={stats.netEarnings}
+              icon="solar:wallet-money-bold-duotone"
+              color="success"
+              subtitle={formatCurrency(stats.netEarnings)}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AnalyticsWidgetSummary
+              title="Applications Submitted"
+              total={stats.applicationsSubmitted}
+              icon="solar:document-add-bold-duotone"
+              color="info"
+              subtitle={`${stats.applicationConversionRate}% conversion`}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AnalyticsWidgetSummary
+              title="Profile Completion Rate"
+              total={stats.profileCompletionRate}
+              icon="solar:user-check-bold-duotone"
+              color="secondary"
+              subtitle={`${stats.applicationsPerApplicant} apps/applicant`}
             />
           </Grid>
         </Grid>

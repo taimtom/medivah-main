@@ -22,6 +22,8 @@ import { uploadFile, getPublicUrl } from 'src/lib/supabase/client';
 import { paths } from 'src/routes/paths';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
+import { useAuthContext } from 'src/auth/hooks';
+import { buildRecordOwnership, scopeOwnedQuery } from 'src/lib/ownership';
 
 // ----------------------------------------------------------------------
 
@@ -34,6 +36,7 @@ const CATEGORIES = [
 
 export function ProductFormView({ id }) {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -65,7 +68,13 @@ export function ProductFormView({ id }) {
 
   const fetchProduct = async () => {
     try {
-      const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+      const { data, error } = await scopeOwnedQuery(
+        supabase.from('products').select('*'),
+        user?.role,
+        user?.id
+      )
+        .eq('id', id)
+        .single();
 
       if (error) throw error;
       setFormData({
@@ -225,15 +234,19 @@ export function ProductFormView({ id }) {
           .trim();
       }
 
-      const productData = {
+      const productData = buildRecordOwnership(user?.role, user?.id, {
         ...formData,
         slug,
         price: formData.is_free ? 0 : parseFloat(formData.price || 0),
         updated_at: new Date().toISOString(),
-      };
+      });
 
       if (id) {
-        const { error } = await supabase.from('products').update(productData).eq('id', id);
+        const { error } = await scopeOwnedQuery(
+          supabase.from('products').update(productData),
+          user?.role,
+          user?.id
+        ).eq('id', id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('products').insert([productData]);
@@ -395,7 +408,7 @@ export function ProductFormView({ id }) {
 
                     {uploadedImageName && (
                       <Alert severity="success">
-                        Image "{uploadedImageName}" uploaded successfully! You can also manually edit the URL below if needed.
+                        Image {uploadedImageName} uploaded successfully! You can also manually edit the URL below if needed.
                       </Alert>
                     )}
 
@@ -490,7 +503,7 @@ export function ProductFormView({ id }) {
 
                     {uploadedFileName && (
                       <Alert severity="success">
-                        File "{uploadedFileName}" uploaded successfully! The file path is stored securely.
+                        File {uploadedFileName} uploaded successfully! The file path is stored securely.
                       </Alert>
                     )}
 
@@ -514,7 +527,7 @@ export function ProductFormView({ id }) {
                                 if (error) throw error;
                                 window.open(data.signedUrl, '_blank', 'noopener noreferrer');
                               } catch (err) {
-                                alert('Error generating download link: ' + err.message);
+                                alert(`Error generating download link: ${err.message}`);
                               }
                             }}
                             startIcon={<Iconify icon="solar:link-bold-duotone" />}

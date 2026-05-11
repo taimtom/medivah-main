@@ -39,7 +39,7 @@ const ICONS = {
 
 // ----------------------------------------------------------------------
 
-export const navData = [
+const ADMIN_NAV = [
   /**
    * Overview
    */
@@ -59,6 +59,8 @@ export const navData = [
       { title: 'Comments', path: paths.dashboard.comments, icon: ICONS.chat },
       { title: 'Products', path: paths.dashboard.products.root, icon: ICONS.product },
       { title: 'Jobs', path: paths.dashboard.jobs.root, icon: ICONS.job },
+      { title: 'Applications Received', path: paths.dashboard.applications.root, icon: ICONS.file },
+      { title: 'Employer Verification', path: paths.dashboard.verification.root, icon: ICONS.lock },
     ],
   },
   /**
@@ -68,6 +70,7 @@ export const navData = [
     subheader: 'Sales',
     items: [
       { title: 'Orders', path: paths.dashboard.orders.root, icon: ICONS.order },
+      { title: 'Credits & Billing', path: paths.dashboard.billing, icon: ICONS.banking },
     ],
   },
   /**
@@ -81,3 +84,68 @@ export const navData = [
     ],
   },
 ];
+
+const APPLICANT_NAV = [
+  {
+    subheader: 'Overview',
+    items: [{ title: 'Dashboard Home', path: paths.dashboard.root, icon: ICONS.dashboard }],
+  },
+  {
+    subheader: 'Profile',
+    items: [{ title: 'Talent Profile', path: paths.dashboard.applicant.profile, icon: ICONS.user }],
+  },
+  {
+    subheader: 'Applications',
+    items: [
+      { title: 'My Applications', path: paths.dashboard.applicant.applications, icon: ICONS.file },
+      { title: 'Saved Jobs', path: paths.dashboard.applicant.savedJobs, icon: ICONS.folder },
+      { title: 'Browse Jobs', path: paths.jobs.root, icon: ICONS.job },
+    ],
+  },
+  {
+    subheader: 'Account',
+    items: [
+      { title: 'Notifications', path: paths.dashboard.applicant.notifications, icon: ICONS.mail },
+    ],
+  },
+];
+
+const RECRUITER_NAV = [
+  {
+    subheader: 'Overview',
+    items: [{ title: 'Dashboard Home', path: paths.dashboard.root, icon: ICONS.dashboard }],
+  },
+  {
+    subheader: 'Profile',
+    items: [{ title: 'Verification', path: paths.dashboard.verification.root, icon: ICONS.lock }],
+  },
+  {
+    subheader: 'Jobs',
+    items: [
+      { title: 'Post Job', path: paths.dashboard.jobs.new, icon: ICONS.job },
+      { title: 'My Jobs', path: paths.dashboard.jobs.root, icon: ICONS.job },
+      { title: 'Applicants', path: paths.dashboard.applications.root, icon: ICONS.file },
+    ],
+  },
+  {
+    subheader: 'Performance',
+    items: [{ title: 'Analytics', path: paths.dashboard.analytics, icon: ICONS.analytics }],
+  },
+  {
+    subheader: 'Billing',
+    items: [{ title: 'Credits & Billing', path: paths.dashboard.billing, icon: ICONS.banking }],
+  },
+  {
+    subheader: 'Account',
+    items: [{ title: 'Notifications', path: paths.dashboard.applicant.notifications, icon: ICONS.mail }],
+  },
+];
+
+export const navData = ADMIN_NAV;
+
+export function getDashboardNavDataByRole(role = 'recruiter') {
+  if (role === 'admin') return ADMIN_NAV;
+  if (role === 'applicant') return APPLICANT_NAV;
+  if (role === 'recruiter' || role === 'member') return RECRUITER_NAV;
+  return RECRUITER_NAV;
+}

@@ -1,10 +1,13 @@
 'use client';
 
-import { useMemo, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import { useSetState } from 'src/hooks/use-set-state';
 
 import { supabase } from 'src/lib/supabase';
+import { ensureMemberProfile } from 'src/lib/member-profile';
+import { normalizeDashboardRole } from 'src/lib/role-capabilities';
+
 import { AuthContext } from '../auth-context';
 
 // ----------------------------------------------------------------------
@@ -15,23 +18,50 @@ export function AuthProvider({ children }) {
     loading: true,
   });
 
-  const checkUserSession = useCallback(async () => {
+  // Cache member profiles by user ID to avoid redundant DB queries on every session check.
+  const profileCache = useRef({});
+
+  const mapUser = useCallback(async (sessionUser) => {
+    let memberProfile = profileCache.current[sessionUser.id];
+    if (!memberProfile) {
+      memberProfile = await ensureMemberProfile(sessionUser);
+      profileCache.current[sessionUser.id] = memberProfile;
+    }
+
+    return {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      displayName: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0],
+      photoURL: sessionUser.user_metadata?.avatar_url || null,
+      role: normalizeDashboardRole(
+        memberProfile?.active_role ||
+          sessionUser.user_metadata?.active_role ||
+          memberProfile?.business_role ||
+          sessionUser.user_metadata?.business_role
+      ),
+      businessRole: memberProfile?.business_role || sessionUser.user_metadata?.business_role || 'member',
+      roles: (memberProfile?.role_capabilities || [])
+        .filter((capability) => capability.status === 'active')
+        .map((capability) => capability.role),
+      roleCapabilities: memberProfile?.role_capabilities || [],
+      company: memberProfile?.company || null,
+      memberProfile,
+    };
+  }, []);
+
+  const checkUserSession = useCallback(async (options = {}) => {
     try {
+      if (options.refreshProfile) {
+        profileCache.current = {};
+      }
+
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) throw error;
 
       if (session?.user) {
-        setState({ 
-          user: {
-            id: session.user.id,
-            email: session.user.email,
-            displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            photoURL: session.user.user_metadata?.avatar_url || null,
-            role: 'admin', // All authenticated users are admins in your case
-          }, 
-          loading: false 
-        });
+        const mappedUser = await mapUser(session.user);
+        setState({ user: mappedUser, loading: false });
       } else {
         setState({ user: null, loading: false });
       }
@@ -39,25 +69,36 @@ export function AuthProvider({ children }) {
       console.error('Error checking session:', error);
       setState({ user: null, loading: false });
     }
-  }, [setState]);
+  }, [setState, mapUser]);
 
   useEffect(() => {
     checkUserSession();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setState({ 
-          user: {
-            id: session.user.id,
-            email: session.user.email,
-            displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            photoURL: session.user.user_metadata?.avatar_url || null,
-            role: 'admin',
-          }, 
-          loading: false 
-        });
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+        if (event === 'USER_UPDATED') {
+          profileCache.current = {};
+        }
+        const mappedUser = await mapUser(session.user);
+        setState({ user: mappedUser, loading: false });
+
+        if (event === 'SIGNED_IN' && ['member', 'recruiter'].includes(mappedUser.businessRole)) {
+          const { data: sessData } = await supabase.auth.getSession();
+          const token = sessData?.session?.access_token;
+          if (token && typeof window !== 'undefined') {
+            fetch(`${window.location.origin}/api/credits/grant-free`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ type: 'signup' }),
+            }).catch(() => {});
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
+        profileCache.current = {};
         setState({ user: null, loading: false });
       }
     });

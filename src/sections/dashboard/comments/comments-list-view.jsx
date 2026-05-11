@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -13,7 +13,8 @@ import TableRow from '@mui/material/TableRow';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
-import CircularProgress from '@mui/material/CircularProgress';
+import TablePagination from '@mui/material/TablePagination';
+import LinearProgress from '@mui/material/LinearProgress';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
@@ -28,11 +29,18 @@ import Alert from '@mui/material/Alert';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
 import { updateBlogComment, deleteBlogComment } from 'src/lib/supabase/blog-engagement';
+import { useAuthContext } from 'src/auth/hooks';
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
 // ----------------------------------------------------------------------
 
 export function CommentsListView() {
+  const { user } = useAuthContext();
   const [comments, setComments] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedComment, setSelectedComment] = useState(null);
@@ -40,38 +48,90 @@ export function CommentsListView() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  const ownedBlogIdsCache = useRef({ userId: null, ids: null });
+
   const fetchComments = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const from = page * rowsPerPage;
+      const to = from + rowsPerPage - 1;
+      const isAdmin = user?.role === 'admin';
+
+      let ownedBlogIds = null;
+      if (!isAdmin) {
+        if (!user?.id) {
+          setComments([]);
+          setTotalCount(0);
+          return 0;
+        }
+        if (ownedBlogIdsCache.current.userId === user.id) {
+          ownedBlogIds = ownedBlogIdsCache.current.ids;
+        } else {
+          const { data: blogsRows, error: blogsError } = await supabase
+            .from('blogs')
+            .select('id')
+            .eq('member_id', user.id);
+          if (blogsError) throw blogsError;
+          ownedBlogIds = (blogsRows || []).map((b) => b.id);
+          ownedBlogIdsCache.current = { userId: user.id, ids: ownedBlogIds };
+        }
+        if (ownedBlogIds.length === 0) {
+          setComments([]);
+          setTotalCount(0);
+          return 0;
+        }
+      }
 
       let query = supabase
         .from('blog_comments')
-        .select(`
+        .select(
+          `
           *,
           blogs:blog_id (
             id,
             title,
-            slug
+            slug,
+            member_id
           )
-        `)
+        `,
+          { count: 'exact' }
+        )
         .order('created_at', { ascending: false });
+
+      if (ownedBlogIds) {
+        query = query.in('blog_id', ownedBlogIds);
+      }
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
 
       setComments(data || []);
+      const next = count ?? 0;
+      setTotalCount(next);
+      return next;
     } catch (error) {
       console.error('Error fetching comments:', error);
       setErrorMessage('Failed to load comments');
+      setComments([]);
+      setTotalCount(0);
+      return 0;
     } finally {
       setLoading(false);
     }
+  }, [filterStatus, user?.id, user?.role, page, rowsPerPage]);
+
+  useEffect(() => {
+    setPage(0);
   }, [filterStatus]);
+
+  useEffect(() => {
+    ownedBlogIdsCache.current = { userId: null, ids: null };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     fetchComments();
@@ -83,7 +143,11 @@ export function CommentsListView() {
 
       if (result.success) {
         setSuccessMessage(`Comment ${newStatus} successfully!`);
-        await fetchComments();
+        const count = await fetchComments();
+        const maxPage = Math.max(0, Math.ceil(Math.max(0, count) / rowsPerPage) - 1);
+        if (page > maxPage) {
+          setPage(maxPage);
+        }
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         setErrorMessage(result.error || 'Failed to update comment');
@@ -104,7 +168,13 @@ export function CommentsListView() {
 
       if (result.success) {
         setSuccessMessage('Comment deleted successfully!');
-        await fetchComments();
+        const nextTotal = Math.max(0, totalCount - 1);
+        const maxPage = Math.max(0, Math.ceil(nextTotal / rowsPerPage) - 1);
+        if (page > maxPage) {
+          setPage(maxPage);
+        } else {
+          await fetchComments();
+        }
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         setErrorMessage(result.error || 'Failed to delete comment');
@@ -135,15 +205,14 @@ export function CommentsListView() {
     }
   };
 
-  if (loading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
+  const handleChangePage = (_event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -151,7 +220,7 @@ export function CommentsListView() {
         {/* Header */}
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h4">Comments Management</Typography>
-          
+
           <TextField
             select
             value={filterStatus}
@@ -173,7 +242,7 @@ export function CommentsListView() {
             {successMessage}
           </Alert>
         )}
-        
+
         {errorMessage && (
           <Alert severity="error" onClose={() => setErrorMessage('')}>
             {errorMessage}
@@ -182,6 +251,7 @@ export function CommentsListView() {
 
         {/* Comments Table */}
         <Card>
+          {loading && <LinearProgress />}
           <TableContainer>
             <Table>
               <TableHead>
@@ -195,7 +265,7 @@ export function CommentsListView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {comments.length === 0 ? (
+                {!loading && totalCount === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                       <Typography variant="body2" color="text.secondary">
@@ -216,7 +286,7 @@ export function CommentsListView() {
                           )}
                         </Stack>
                       </TableCell>
-                      
+
                       <TableCell sx={{ maxWidth: 300 }}>
                         <Typography
                           variant="body2"
@@ -231,13 +301,13 @@ export function CommentsListView() {
                           {comment.content}
                         </Typography>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
                           {comment.blogs?.title || 'Unknown'}
                         </Typography>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Chip
                           label={comment.status}
@@ -245,13 +315,13 @@ export function CommentsListView() {
                           size="small"
                         />
                       </TableCell>
-                      
+
                       <TableCell>
                         <Typography variant="caption">
                           {new Date(comment.created_at).toLocaleDateString()}
                         </Typography>
                       </TableCell>
-                      
+
                       <TableCell align="right">
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                           <IconButton
@@ -261,7 +331,7 @@ export function CommentsListView() {
                           >
                             <Iconify icon="solar:eye-bold" />
                           </IconButton>
-                          
+
                           {comment.status !== 'approved' && (
                             <IconButton
                               size="small"
@@ -272,7 +342,7 @@ export function CommentsListView() {
                               <Iconify icon="solar:check-circle-bold" />
                             </IconButton>
                           )}
-                          
+
                           {comment.status !== 'rejected' && (
                             <IconButton
                               size="small"
@@ -283,7 +353,7 @@ export function CommentsListView() {
                               <Iconify icon="solar:close-circle-bold" />
                             </IconButton>
                           )}
-                          
+
                           <IconButton
                             size="small"
                             color="warning"
@@ -292,7 +362,7 @@ export function CommentsListView() {
                           >
                             <Iconify icon="solar:shield-warning-bold" />
                           </IconButton>
-                          
+
                           <IconButton
                             size="small"
                             color="error"
@@ -309,6 +379,15 @@ export function CommentsListView() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalCount}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          />
         </Card>
 
         {/* View Comment Dialog */}
@@ -417,4 +496,3 @@ export function CommentsListView() {
     </Container>
   );
 }
-
