@@ -163,9 +163,20 @@ export function JobFormView({ id }) {
 
       if (id && jobData.published && !wasPublishedRef.current && user?.role !== 'admin') {
         // Draft being published for the first time — must go through credit-gated publish route
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error(
+            'Your session has expired. Please sign out and sign in again, then try publishing.'
+          );
+        }
         const response = await fetch('/api/jobs/publish', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             ...jobData,
             job_id: id,
@@ -190,9 +201,20 @@ export function JobFormView({ id }) {
         ).eq('id', id);
         if (error) throw error;
       } else if (jobData.published && user?.role !== 'admin') {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            throw new Error(
+              'Your session has expired. Please sign out and sign in again, then try publishing.'
+            );
+          }
           const response = await fetch('/api/jobs/publish', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
             body: JSON.stringify({
               ...jobData,
               member_id: user?.id,
