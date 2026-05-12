@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
 export async function GET(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'all';
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -44,4 +47,3 @@ export async function GET(request) {
     );
   }
 }
-

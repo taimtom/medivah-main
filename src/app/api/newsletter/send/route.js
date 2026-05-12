@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendNewsletterEmail } from 'src/lib/email/resend';
 import { replaceLinksWithTracking, createTrackingPixel } from 'src/lib/newsletter/utils';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
 export async function POST(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { newsletter_id, test_email, source_filter, variant_id } = await request.json();
 
     if (!newsletter_id) {

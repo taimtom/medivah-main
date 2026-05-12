@@ -3,6 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+function useDebounce(value, delay) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
 import { MainLayout } from 'src/layouts/main';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -41,6 +50,7 @@ export function BlogListView() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const rawPageParam = searchParams.get('page');
   const pageParam = Number(rawPageParam || '1');
@@ -72,7 +82,7 @@ export function BlogListView() {
 
       let query = supabase
         .from('blogs')
-        .select('*', { count: 'exact' })
+        .select('id, title, slug, excerpt, featured_image, category, published_at, read_time', { count: 'exact' })
         .eq('published', true)
         .order('published_at', { ascending: false })
         .range(start, end);
@@ -81,8 +91,8 @@ export function BlogListView() {
         query = query.eq('category', selectedCategory);
       }
 
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`);
+      if (debouncedSearchQuery) {
+        query = query.or(`title.ilike.%${debouncedSearchQuery}%,excerpt.ilike.%${debouncedSearchQuery}%`);
       }
 
       const { data, count, error } = await query;
@@ -109,7 +119,7 @@ export function BlogListView() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, selectedCategory, updatePageInUrl]);
+  }, [currentPage, debouncedSearchQuery, selectedCategory, updatePageInUrl]);
 
   useEffect(() => {
     fetchBlogs();

@@ -43,6 +43,7 @@ export function BlogPostView({ slug }) {
   const theme = useTheme();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   
   // Likes/Dislikes state
   const [likeStats, setLikeStats] = useState({ likesCount: 0, dislikesCount: 0, userReaction: null });
@@ -165,6 +166,7 @@ export function BlogPostView({ slug }) {
       }
     } catch (error) {
       console.error('Error fetching blog:', error);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -350,6 +352,26 @@ export function BlogPostView({ slug }) {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 15 }}>
           <CircularProgress />
         </Box>
+      </MainLayout>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <MainLayout>
+        <Container sx={{ py: 15, textAlign: 'center' }}>
+          <Alert severity="error" sx={{ mb: 3, maxWidth: 480, mx: 'auto' }}>
+            Something went wrong. Please try again.
+          </Alert>
+          <Button
+            component={RouterLink}
+            href={paths.blog.root}
+            variant="contained"
+            startIcon={<Iconify icon="eva:arrow-back-fill" />}
+          >
+            Back to Blog
+          </Button>
+        </Container>
       </MainLayout>
     );
   }

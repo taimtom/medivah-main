@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 
@@ -28,6 +29,7 @@ export function JobDetailView({ jobId }) {
   const { user } = useAuthContext();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [submittingInternal, setSubmittingInternal] = useState(false);
   const [isEmployerVerified, setIsEmployerVerified] = useState(false);
 
@@ -66,6 +68,7 @@ export function JobDetailView({ jobId }) {
       }
     } catch (error) {
       console.error('Error fetching job:', error);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -136,6 +139,26 @@ export function JobDetailView({ jobId }) {
     );
   }
 
+  if (fetchError) {
+    return (
+      <MainLayout>
+        <Container sx={{ py: 15, textAlign: 'center' }}>
+          <Alert severity="error" sx={{ mb: 3, maxWidth: 480, mx: 'auto' }}>
+            Something went wrong. Please try again.
+          </Alert>
+          <Button
+            component={RouterLink}
+            href={paths.jobs.root}
+            variant="contained"
+            startIcon={<Iconify icon="eva:arrow-back-fill" />}
+          >
+            Back to Jobs
+          </Button>
+        </Container>
+      </MainLayout>
+    );
+  }
+
   if (!job) {
     return (
       <MainLayout>
@@ -144,7 +167,7 @@ export function JobDetailView({ jobId }) {
             Job Not Found
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            The job posting you're looking for doesn't exist or has been removed.
+            The job posting you&apos;re looking for doesn&apos;t exist or has been removed.
           </Typography>
           <Button
             component={RouterLink}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { createServerClient } from 'src/lib/supabase';
+import { getRequestUser } from 'src/lib/request-user';
 import { calculateApplicantProfileCompletion } from 'src/lib/applicant-profile';
 
 function parseJsonArray(value) {
@@ -23,18 +24,16 @@ function normaliseProfile(row) {
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('user_id');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('applicant_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) throw error;
@@ -50,18 +49,19 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = createServerClient();
     const payload = await request.json();
-
-    if (!payload.user_id) {
-      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
-    }
 
     const profileCompletion = calculateApplicantProfileCompletion(payload);
     const now = new Date().toISOString();
 
     const upsertPayload = {
-      user_id: payload.user_id,
+      user_id: user.id,
       full_name: payload.full_name || '',
       location: payload.location || null,
       skills: payload.skills || [],
@@ -83,7 +83,7 @@ export async function POST(request) {
     await supabase.from('member_role_capabilities').upsert(
       [
         {
-          user_id: payload.user_id,
+          user_id: user.id,
           role: 'applicant',
           status: profileCompletion >= 50 ? 'active' : 'in_progress',
           onboarding_started_at: now,

@@ -23,6 +23,7 @@ import Pagination from '@mui/material/Pagination';
 import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
 import { supabase } from 'src/lib/supabase';
+import { formatPrice } from 'src/lib/format';
 
 // ----------------------------------------------------------------------
 
@@ -75,7 +76,7 @@ export function ResourcesListView() {
       const end = start + ITEMS_PER_PAGE - 1;
       let query = supabase
         .from('products')
-        .select('*', { count: 'exact' })
+        .select('id, name, description, image_url, category, price, is_free, created_at', { count: 'exact' })
         .eq('published', true)
         .order('created_at', { ascending: false })
         .range(start, end);
@@ -128,13 +129,6 @@ export function ResourcesListView() {
     },
     [currentPage, updatePageInUrl]
   );
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(price);
-  };
 
   return (
     <MainLayout>

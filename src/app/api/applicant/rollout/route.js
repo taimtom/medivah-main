@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
 const ROLLOUT_KEY = 'applicant_rollout_control';
 
@@ -21,7 +22,7 @@ export async function GET(request) {
     const isPilotUser = Array.isArray(value.pilot_member_ids) ? value.pilot_member_ids.includes(userId) : false;
     const enabled = Boolean(value.enabled) && (!value.pilot_only || isPilotUser);
 
-    return NextResponse.json({ enabled, config: value }, { status: 200 });
+    return NextResponse.json({ enabled }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Failed to evaluate rollout' }, { status: 500 });
   }
@@ -29,6 +30,11 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const payload = await request.json();
     const supabase = createServerClient();
 

@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
 export async function GET(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { searchParams } = new URL(request.url);
     const newsletterId = searchParams.get('newsletter_id');
 
@@ -15,7 +18,6 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Newsletter ID required' }, { status: 400 });
     }
 
-    // Get newsletter stats
     const { data: newsletter } = await supabase
       .from('newsletters')
       .select('*')
@@ -26,13 +28,11 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Newsletter not found' }, { status: 404 });
     }
 
-    // Get send stats
-    const { data: sends, count: totalSends } = await supabase
+    const { data: sends } = await supabase
       .from('newsletter_sends')
       .select('status', { count: 'exact' })
       .eq('newsletter_id', newsletterId);
 
-    // Calculate engagement metrics
     const statusCounts = {
       sent: 0,
       delivered: 0,
@@ -48,19 +48,6 @@ export async function GET(request) {
       }
     });
 
-    // Get click stats
-    const { data: clicks } = await supabase
-      .from('newsletter_link_clicks')
-      .select('link_id, clicked_at')
-      .in(
-        'link_id',
-        supabase
-          .from('newsletter_links')
-          .select('id')
-          .eq('newsletter_id', newsletterId)
-      );
-
-    // Get top clicked links
     const { data: links } = await supabase
       .from('newsletter_links')
       .select('id, original_url, click_count, unique_click_count')
@@ -68,14 +55,12 @@ export async function GET(request) {
       .order('click_count', { ascending: false })
       .limit(10);
 
-    // Calculate rates
     const sentCount = newsletter.recipients_count || 0;
     const openRate = sentCount > 0 ? ((newsletter.opened_count || 0) / sentCount) * 100 : 0;
     const clickRate = sentCount > 0 ? ((newsletter.clicked_count || 0) / sentCount) * 100 : 0;
     const clickToOpenRate =
       newsletter.opened_count > 0 ? ((newsletter.clicked_count || 0) / newsletter.opened_count) * 100 : 0;
 
-    // Get time-based stats (opens per day)
     const { data: opensByDay } = await supabase
       .from('newsletter_sends')
       .select('opened_at')
@@ -112,4 +97,3 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
   }
 }
-

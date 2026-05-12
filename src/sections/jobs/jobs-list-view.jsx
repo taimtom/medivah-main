@@ -3,6 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+function useDebounce(value, delay) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
 import { MainLayout } from 'src/layouts/main';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -46,6 +55,7 @@ export function JobsListView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedExperience, setSelectedExperience] = useState('All');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const rawPageParam = searchParams.get('page');
   const pageParam = Number(rawPageParam || '1');
@@ -77,7 +87,7 @@ export function JobsListView() {
 
       let query = supabase
         .from('jobs')
-        .select('*', { count: 'exact' })
+        .select('id, title, company, location, type, experience, created_at, member_id', { count: 'exact' })
         .eq('published', true)
         .order('created_at', { ascending: false })
         .range(start, end);
@@ -90,9 +100,9 @@ export function JobsListView() {
         query = query.eq('experience', selectedExperience);
       }
 
-      if (searchQuery) {
+      if (debouncedSearchQuery) {
         query = query.or(
-          `title.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`
+          `title.ilike.%${debouncedSearchQuery}%,company.ilike.%${debouncedSearchQuery}%,location.ilike.%${debouncedSearchQuery}%`
         );
       }
 
@@ -132,7 +142,7 @@ export function JobsListView() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, selectedType, selectedExperience, updatePageInUrl]);
+  }, [currentPage, debouncedSearchQuery, selectedType, selectedExperience, updatePageInUrl]);
 
   useEffect(() => {
     fetchJobs();

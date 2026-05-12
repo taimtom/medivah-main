@@ -1,28 +1,30 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { getRequestUser } from 'src/lib/request-user';
 
 /**
- * Generate a signed URL for product file download
+ * Generate a signed URL for product file download.
  * POST /api/products/download
- * Body: { file_path: "products/filename.zip", expires_in: 3600 (optional, default 7 days) }
+ * Body: { file_path: "products/filename.zip", product_id: "uuid", expires_in?: number }
+ * Requires: authenticated user who has a completed order for this product.
  */
 export async function POST(request) {
   try {
-    const { file_path, expires_in } = await request.json();
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!file_path) {
+    const { file_path, product_id, expires_in } = await request.json();
+
+    if (!file_path || !product_id) {
       return NextResponse.json(
-        { error: 'File path is required' },
+        { error: 'file_path and product_id are required' },
         { status: 400 }
       );
     }
 
-    // Validate file path format (should start with 'products/')
     if (!file_path.startsWith('products/')) {
       return NextResponse.json(
         { error: 'Invalid file path format. Must start with "products/"' },
@@ -30,10 +32,26 @@ export async function POST(request) {
       );
     }
 
-    // Default to 7 days (604800 seconds)
+    const supabase = createServerClient();
+
+    // Verify the user has a completed order for this product
+    const { data: order } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('product_id', product_id)
+      .eq('customer_email', user.email)
+      .eq('status', 'completed')
+      .maybeSingle();
+
+    if (!order) {
+      return NextResponse.json(
+        { error: 'No completed order found for this product' },
+        { status: 403 }
+      );
+    }
+
     const expiration = expires_in || 60 * 60 * 24 * 7;
 
-    // Generate signed URL
     const { data, error } = await supabase.storage
       .from('products')
       .createSignedUrl(file_path, expiration);

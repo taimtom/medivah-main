@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { createServerClient } from 'src/lib/supabase';
+import { getRequestUser } from 'src/lib/request-user';
 import { grantCreditAllotment } from 'src/lib/wallet';
 
 async function verifyPaystackAmount(reference, expectedAmountKobo) {
@@ -34,19 +35,23 @@ function addValidityMonths(isoStart, months) {
 
 export async function POST(request) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = createServerClient();
     const body = await request.json();
     const {
-      member_id: memberId,
       package_id: packageId,
       slug: packageSlug,
       paystack_reference: paystackReference,
       idempotency_key: idempotencyKey,
     } = body;
 
-    if (!memberId || !paystackReference) {
+    if (!paystackReference) {
       return NextResponse.json(
-        { error: 'member_id and paystack_reference are required' },
+        { error: 'paystack_reference is required' },
         { status: 400 }
       );
     }
@@ -67,6 +72,8 @@ export async function POST(request) {
     const nairaPrice = Number(pack.naira_price);
     const expectedKobo = Math.round(nairaPrice * 100);
     await verifyPaystackAmount(paystackReference, expectedKobo);
+
+    const memberId = user.id;
 
     const { data: paymentEvent } = await supabase
       .from('payment_events')

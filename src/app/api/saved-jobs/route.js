@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 
 import { createServerClient } from 'src/lib/supabase';
+import { getRequestUser } from 'src/lib/request-user';
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const applicantId = searchParams.get('applicant_id');
-
-    if (!applicantId) {
-      return NextResponse.json({ error: 'applicant_id is required' }, { status: 400 });
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('saved_jobs')
       .select('id, created_at, jobs:job_id(*)')
-      .eq('applicant_id', applicantId)
+      .eq('applicant_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -27,15 +26,20 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const payload = await request.json();
-    if (!payload.applicant_id || !payload.job_id) {
-      return NextResponse.json({ error: 'applicant_id and job_id are required' }, { status: 400 });
+    if (!payload.job_id) {
+      return NextResponse.json({ error: 'job_id is required' }, { status: 400 });
     }
 
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('saved_jobs')
-      .insert([{ applicant_id: payload.applicant_id, job_id: payload.job_id }])
+      .insert([{ applicant_id: user.id, job_id: payload.job_id }])
       .select('*')
       .single();
 
@@ -48,18 +52,22 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const applicantId = searchParams.get('applicant_id');
     const jobId = searchParams.get('job_id');
-    if (!applicantId || !jobId) {
-      return NextResponse.json({ error: 'applicant_id and job_id are required' }, { status: 400 });
+    if (!jobId) {
+      return NextResponse.json({ error: 'job_id is required' }, { status: 400 });
     }
 
     const supabase = createServerClient();
     const { error } = await supabase
       .from('saved_jobs')
       .delete()
-      .eq('applicant_id', applicantId)
+      .eq('applicant_id', user.id)
       .eq('job_id', jobId);
 
     if (error) throw error;

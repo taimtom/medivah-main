@@ -47,8 +47,7 @@ export async function generateMetadata({ params }) {
     const title = `${blog.title} | ${CONFIG.site.name}`;
     const description = blog.excerpt || 'Your trusted hub for HR knowledge, career guidance, and workplace insights.';
     
-    // Always use the default Open Graph image for consistent social sharing
-    const image = defaultOgImage;
+    const image = blog.featured_image || defaultOgImage;
 
     return {
       title,

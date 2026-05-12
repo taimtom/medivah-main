@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
-// Get variants for a newsletter
 export async function GET(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { searchParams } = new URL(request.url);
     const newsletterId = searchParams.get('newsletter_id');
 
@@ -31,9 +33,14 @@ export async function GET(request) {
   }
 }
 
-// Create variant
 export async function POST(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { newsletter_id, variant_type, variant_name, subject, content_html, preview_text } = await request.json();
 
     if (!newsletter_id || !variant_type || !variant_name) {
@@ -68,7 +75,6 @@ export async function POST(request) {
 
     if (error) throw error;
 
-    // Update newsletter to mark as A/B test
     await supabase
       .from('newsletters')
       .update({ is_ab_test: true })
@@ -81,9 +87,14 @@ export async function POST(request) {
   }
 }
 
-// Update variant
 export async function PUT(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { id, variant_name, subject, content_html, preview_text } = await request.json();
 
     if (!id) {
@@ -99,7 +110,12 @@ export async function PUT(request) {
     if (content_html !== undefined) updateData.content_html = content_html;
     if (preview_text !== undefined) updateData.preview_text = preview_text;
 
-    const { data, error } = await supabase.from('newsletter_variants').update(updateData).eq('id', id).select().single();
+    const { data, error } = await supabase
+      .from('newsletter_variants')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
 
     if (error) throw error;
 
@@ -110,9 +126,14 @@ export async function PUT(request) {
   }
 }
 
-// Delete variant
 export async function DELETE(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -130,4 +151,3 @@ export async function DELETE(request) {
     return NextResponse.json({ error: 'Failed to delete variant' }, { status: 500 });
   }
 }
-

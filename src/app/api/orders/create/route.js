@@ -3,6 +3,35 @@ import { sendOrderConfirmationEmail } from 'src/lib/email/resend';
 import { computeCommissionSplit } from 'src/lib/financial-config';
 import { createServerClient } from 'src/lib/supabase';
 
+async function verifyPaystackTransaction(reference, expectedAmountNaira) {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  if (!secret) throw new Error('Paystack is not configured');
+
+  const res = await fetch(
+    `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  const data = await res.json();
+
+  if (!res.ok || data?.data?.status !== 'success') {
+    throw new Error(data?.message || 'Paystack verification failed');
+  }
+
+  const paidKobo = Number(data?.data?.amount);
+  const expectedKobo = Math.round(Number(expectedAmountNaira) * 100);
+  if (paidKobo !== expectedKobo) {
+    throw new Error('Payment amount does not match product price');
+  }
+
+  return data;
+}
+
 export async function POST(request) {
   const supabase = createServerClient();
   try {
@@ -15,15 +44,20 @@ export async function POST(request) {
       );
     }
 
-    const { data: productMeta } = await supabase
+    const { data: productMeta, error: productError } = await supabase
       .from('products')
-      .select('id, name, file_url, member_id')
+      .select('id, name, file_url, member_id, price')
       .eq('id', product_id)
       .single();
 
+    if (productError || !productMeta) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    await verifyPaystackTransaction(paystack_reference, productMeta.price);
+
     const split = computeCommissionSplit(amount);
 
-    // Create order in database
     const { data, error } = await supabase
       .from('orders')
       .insert([
@@ -81,7 +115,6 @@ export async function POST(request) {
         .single();
 
       if (!existing) {
-        // Create new subscriber
         await supabase.from('newsletter_subscribers').insert([
           {
             email: customer_email.toLowerCase(),
@@ -90,7 +123,6 @@ export async function POST(request) {
           },
         ]);
       } else if (existing.status === 'unsubscribed') {
-        // Re-subscribe if previously unsubscribed
         await supabase
           .from('newsletter_subscribers')
           .update({
@@ -101,7 +133,6 @@ export async function POST(request) {
           })
           .eq('id', existing.id);
       } else if (existing.status === 'subscribed') {
-        // Update source if already subscribed
         await supabase
           .from('newsletter_subscribers')
           .update({
@@ -111,49 +142,40 @@ export async function POST(request) {
           .eq('id', existing.id);
       }
     } catch (newsletterError) {
-      // Don't fail order creation if newsletter subscription fails
       console.error('Newsletter auto-subscribe error:', newsletterError);
     }
 
-    // Get product details and generate signed URL for download
+    // Generate signed download URL and send confirmation email
     let downloadUrl = null;
     try {
-        const product = productMeta;
-      const productError = null;
-
-      if (!productError && product && product.file_url) {
-        if (product.file_url.startsWith('products/')) {
-          // Generate signed URL valid for 7 days
+      if (productMeta.file_url) {
+        if (productMeta.file_url.startsWith('products/')) {
           const { data: signedUrlData, error: urlError } = await supabase.storage
             .from('products')
-            .createSignedUrl(product.file_url, 60 * 60 * 24 * 7);
+            .createSignedUrl(productMeta.file_url, 60 * 60 * 24 * 7);
 
           if (!urlError && signedUrlData) {
             downloadUrl = signedUrlData.signedUrl;
           }
         } else {
-          // Legacy support: if it's already a full URL, use it as-is
-          downloadUrl = product.file_url;
+          downloadUrl = productMeta.file_url;
         }
       }
 
-      // Send order confirmation email with download link
-      if (product && downloadUrl) {
+      if (downloadUrl) {
         const emailResult = await sendOrderConfirmationEmail({
           customerEmail: customer_email,
-          customerName: customer_email.split('@')[0], // Use email username as fallback
-          productName: product.name,
+          customerName: customer_email.split('@')[0],
+          productName: productMeta.name,
           amount,
           downloadLink: downloadUrl,
         });
 
         if (!emailResult.success) {
           console.error('Email sending error:', emailResult.error);
-          // Don't fail order creation if email fails
         }
       }
     } catch (downloadError) {
-      // Don't fail order creation if download URL generation fails
       console.error('Download URL generation error:', downloadError);
     }
 
@@ -164,10 +186,8 @@ export async function POST(request) {
   } catch (error) {
     console.error('Error creating order:', error);
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: error.message || 'Failed to create order' },
       { status: 500 }
     );
   }
 }
-
-

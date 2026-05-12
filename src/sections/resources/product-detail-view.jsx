@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -20,6 +21,7 @@ import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
+import { formatPrice } from 'src/lib/format';
 import { CONFIG } from 'src/config-global';
 import { ShareButtons } from 'src/components/share-buttons';
 
@@ -29,6 +31,7 @@ export function ProductDetailView({ productId }) {
   const theme = useTheme();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -55,16 +58,10 @@ export function ProductDetailView({ productId }) {
       setProduct(data);
     } catch (error) {
       console.error('Error fetching product:', error);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(price);
   };
 
   if (loading) {
@@ -73,6 +70,26 @@ export function ProductDetailView({ productId }) {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 15 }}>
           <CircularProgress />
         </Box>
+      </MainLayout>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <MainLayout>
+        <Container sx={{ py: 15, textAlign: 'center' }}>
+          <Alert severity="error" sx={{ mb: 3, maxWidth: 480, mx: 'auto' }}>
+            Something went wrong. Please try again.
+          </Alert>
+          <Button
+            component={RouterLink}
+            href={paths.resources.root}
+            variant="contained"
+            startIcon={<Iconify icon="eva:arrow-back-fill" />}
+          >
+            Back to Resources
+          </Button>
+        </Container>
       </MainLayout>
     );
   }

@@ -50,8 +50,7 @@ export async function generateMetadata({ params }) {
       ? `${product.description.substring(0, 155)}...` 
       : `Get ${product.name} - ${product.category} resource from ${CONFIG.site.name}. ${priceText}.`;
     
-    // Always use the default Open Graph image for consistent social sharing
-    const image = defaultOgImage;
+    const image = product.image_url || defaultOgImage;
 
     return {
       title,

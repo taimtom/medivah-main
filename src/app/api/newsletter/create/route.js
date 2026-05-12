@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { createServerClient } from 'src/lib/supabase';
+import { requireAdminActorId } from 'src/lib/require-admin';
 
 export async function POST(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { subject, content_html, content_text, preview_text, scheduled_at } = await request.json();
 
     if (!subject || !content_html) {
@@ -51,6 +54,12 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
+    const adminId = await requireAdminActorId(request);
+    if (!adminId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = createServerClient();
     const { id, subject, content_html, content_text, preview_text, scheduled_at, status } = await request.json();
 
     if (!id || !subject || !content_html) {
@@ -98,4 +107,3 @@ export async function PUT(request) {
     );
   }
 }
-

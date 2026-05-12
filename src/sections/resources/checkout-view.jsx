@@ -20,6 +20,7 @@ import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
 import { Iconify } from 'src/components/iconify';
 import { supabase } from 'src/lib/supabase';
+import { formatPrice } from 'src/lib/format';
 import { MainLayout } from 'src/layouts/main';
 
 // ----------------------------------------------------------------------
@@ -62,13 +63,6 @@ export function CheckoutView() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(price);
   };
 
   const handleChange = (e) => {
