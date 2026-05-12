@@ -87,7 +87,7 @@ export function JobsListView() {
 
       let query = supabase
         .from('jobs')
-        .select('id, title, company, location, type, experience, created_at, member_id', { count: 'exact' })
+        .select('id, title, company, location, type, experience, description, salary_range, expires_at, apply_method, apply_link, apply_email, requires_verification_for_internal_only, created_at, member_id', { count: 'exact' })
         .eq('published', true)
         .order('created_at', { ascending: false })
         .range(start, end);
