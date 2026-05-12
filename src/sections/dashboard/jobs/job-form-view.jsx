@@ -14,8 +14,13 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import MenuItem from '@mui/material/MenuItem';
 import LoadingButton from '@mui/lab/LoadingButton';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 import { Iconify } from 'src/components/iconify';
+import { RouterLink } from 'src/routes/components';
 import { Editor } from 'src/components/editor';
 import { supabase } from 'src/lib/supabase';
 import { paths } from 'src/routes/paths';
@@ -32,6 +37,12 @@ import Paper from '@mui/material/Paper';
 const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Remote'];
 const EXPERIENCE_LEVELS = ['Entry Level', '1-3 years', '3-5 years', '5+ years'];
 
+function createInsufficientCreditsError(message) {
+  const err = new Error(message);
+  err.insufficientCredits = true;
+  return err;
+}
+
 export function JobFormView({ id }) {
   const router = useRouter();
   const { user } = useAuthContext();
@@ -40,6 +51,12 @@ export function JobFormView({ id }) {
   const wasPublishedRef = useRef(false);
   const [descriptionTab, setDescriptionTab] = useState('edit');
   const [requirementsTab, setRequirementsTab] = useState('edit');
+  const [saveErrorDialog, setSaveErrorDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    showBillingLink: false,
+  });
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -159,8 +176,8 @@ export function JobFormView({ id }) {
         const result = await response.json();
         if (!response.ok) {
           if (response.status === 402 && result.insufficient_credits) {
-            throw new Error(
-              'Not enough credits to publish. Use Credits & Billing to buy a pack or wait for your monthly free post.'
+            throw createInsufficientCreditsError(
+              'Publishing a job costs 1 credit. You do not have enough credits right now. You can buy a credit pack or use a free monthly post when you are eligible.'
             );
           }
           throw new Error(result.error || 'Failed to publish job');
@@ -185,8 +202,8 @@ export function JobFormView({ id }) {
           const result = await response.json();
           if (!response.ok) {
             if (response.status === 402 && result.insufficient_credits) {
-              throw new Error(
-                'Not enough credits to publish. Use Credits & Billing to buy a pack or wait for your monthly free post.'
+              throw createInsufficientCreditsError(
+                'Publishing a job costs 1 credit. You do not have enough credits right now. You can buy a credit pack or use a free monthly post when you are eligible.'
               );
             }
             throw new Error(result.error || 'Failed to publish job');
@@ -199,7 +216,15 @@ export function JobFormView({ id }) {
       router.push(paths.dashboard.jobs.root);
     } catch (error) {
       console.error('Error saving job:', error);
-      alert('Failed to save job');
+      const insufficientCredits = error?.insufficientCredits === true;
+      setSaveErrorDialog({
+        open: true,
+        title: insufficientCredits ? 'Not enough credits to publish' : 'Could not save job',
+        message:
+          error?.message ||
+          'Something went wrong while saving. Please try again, or contact support if the problem continues.',
+        showBillingLink: insufficientCredits,
+      });
     } finally {
       setSaving(false);
     }
@@ -476,6 +501,34 @@ export function JobFormView({ id }) {
           </Stack>
         </Stack>
       </form>
+
+      <Dialog
+        open={saveErrorDialog.open}
+        onClose={() => setSaveErrorDialog((s) => ({ ...s, open: false }))}
+        aria-labelledby="job-save-error-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="job-save-error-dialog-title">{saveErrorDialog.title}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {saveErrorDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSaveErrorDialog((s) => ({ ...s, open: false }))}>Close</Button>
+          {saveErrorDialog.showBillingLink && (
+            <Button
+              component={RouterLink}
+              href={paths.dashboard.billing}
+              variant="contained"
+              onClick={() => setSaveErrorDialog((s) => ({ ...s, open: false }))}
+            >
+              Credits & Billing
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
