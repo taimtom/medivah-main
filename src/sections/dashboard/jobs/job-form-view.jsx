@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 import Container from '@mui/material/Container';
@@ -37,6 +37,7 @@ export function JobFormView({ id }) {
   const { user } = useAuthContext();
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
+  const wasPublishedRef = useRef(false);
   const [descriptionTab, setDescriptionTab] = useState('edit');
   const [requirementsTab, setRequirementsTab] = useState('edit');
   const [formData, setFormData] = useState({
@@ -98,6 +99,7 @@ export function JobFormView({ id }) {
           data.requires_verification_for_internal_only ?? false,
         published: data.published || false,
       });
+      wasPublishedRef.current = data.published || false;
     } catch (error) {
       console.error('Error fetching job:', error);
       alert('Failed to load job');
@@ -142,7 +144,28 @@ export function JobFormView({ id }) {
         jobData.member_id = user.id;
       }
 
-      if (id) {
+      if (id && jobData.published && !wasPublishedRef.current && user?.role !== 'admin') {
+        // Draft being published for the first time — must go through credit-gated publish route
+        const response = await fetch('/api/jobs/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...jobData,
+            job_id: id,
+            member_id: user?.id,
+            idempotency_key: `job-publish-${id}`,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          if (response.status === 402 && result.insufficient_credits) {
+            throw new Error(
+              'Not enough credits to publish. Use Credits & Billing to buy a pack or wait for your monthly free post.'
+            );
+          }
+          throw new Error(result.error || 'Failed to publish job');
+        }
+      } else if (id) {
         const { error } = await scopeOwnedQuery(
           supabase.from('jobs').update(jobData),
           user?.role,
