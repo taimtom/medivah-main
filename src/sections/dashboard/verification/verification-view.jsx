@@ -79,6 +79,14 @@ const EMPTY_FORM = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+async function getAccessToken() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.access_token || '';
+}
+
 async function uploadVerificationDoc(file, userId) {
   const ext = file.name.split('.').pop();
   const path = `verification-docs/${userId}/${Date.now()}.${ext}`;
@@ -230,9 +238,13 @@ function VerificationForm({ existingVerification, onSuccess }) {
         documentPath = await uploadVerificationDoc(form.document_file, user.id);
       }
 
+      const token = await getAccessToken();
       const response = await fetch('/api/verification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           member_id: user.id,
           requester_name: user.displayName || '',
@@ -550,7 +562,10 @@ export function VerificationView() {
   const fetchRows = useCallback(async () => {
     if (!user?.id) return;
     const role = user.role === 'admin' ? 'admin' : 'member';
-    const res = await fetch(`/api/verification?role=${role}&user_id=${user.id}`);
+    const token = await getAccessToken();
+    const res = await fetch(`/api/verification?role=${role}&user_id=${user.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const result = await res.json();
     if (res.ok) setRows(result.rows || []);
     setLoading(false);
