@@ -22,6 +22,7 @@ import CardContent from '@mui/material/CardContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import Skeleton from '@mui/material/Skeleton';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
@@ -42,9 +43,43 @@ const STATUS_COLOR = {
   closed: 'default',
 };
 
+function ApplicationsTableSkeleton() {
+  return (
+    <Card>
+      <CardContent sx={{ p: 0 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Job</TableCell>
+              <TableCell>Applicant</TableCell>
+              <TableCell>Location</TableCell>
+              <TableCell>Current Status</TableCell>
+              <TableCell>Applied</TableCell>
+              <TableCell>Update Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {[1, 2, 3, 4, 5].map((row) => (
+              <TableRow key={row}>
+                <TableCell><Skeleton width="80%" /></TableCell>
+                <TableCell><Skeleton width="70%" /></TableCell>
+                <TableCell><Skeleton width="60%" /></TableCell>
+                <TableCell><Skeleton variant="rounded" width={88} height={24} /></TableCell>
+                <TableCell><Skeleton width={72} /></TableCell>
+                <TableCell><Skeleton variant="rounded" width={96} height={36} /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function RecruiterApplicationsView() {
   const { user } = useAuthContext();
   const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingChange, setPendingChange] = useState(null);
   const [note, setNote] = useState('');
@@ -52,17 +87,26 @@ export function RecruiterApplicationsView() {
 
   const fetchRows = async () => {
     if (!user?.id) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const response = await fetch('/api/applications?limit=200', {
-      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
-    });
-    const result = await response.json();
-    if (response.ok) setRows(result.rows || []);
+    setLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const response = await fetch('/api/applications?limit=200', {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
+      const result = await response.json();
+      if (response.ok) setRows(result.rows || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     fetchRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -105,7 +149,9 @@ export function RecruiterApplicationsView() {
       <Stack spacing={3}>
         <Typography variant="h4">Applications Received</Typography>
 
-        {rows.length === 0 ? (
+        {loading ? (
+          <ApplicationsTableSkeleton />
+        ) : rows.length === 0 ? (
           <Typography color="text.secondary">No applications yet.</Typography>
         ) : (
           <Card>

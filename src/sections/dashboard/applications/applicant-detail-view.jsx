@@ -26,6 +26,14 @@ import { Iconify } from 'src/components/iconify';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+async function getAccessToken() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.access_token || '';
+}
+
 async function getCvSignedUrl(filePath) {
   if (!filePath) return null;
   const { data } = await supabase.storage.from('applicant-cvs').createSignedUrl(filePath, 3600);
@@ -413,7 +421,10 @@ export function ApplicantDetailView({ userId }) {
       if (!userId) return;
       try {
         setLoading(true);
-        const res = await fetch(`/api/applicant/profile?user_id=${userId}`);
+        const token = await getAccessToken();
+        const res = await fetch(`/api/applicant/profile?user_id=${userId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Failed to load profile');
         setProfile(result.profile);

@@ -3,6 +3,34 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from 'src/lib/supabase';
 import { getRequestUser } from 'src/lib/request-user';
 import { calculateApplicantProfileCompletion } from 'src/lib/applicant-profile';
+import { normalizeDashboardRole } from 'src/lib/role-capabilities';
+
+async function canViewApplicantProfile(supabase, requester, targetUserId) {
+  if (requester.id === targetUserId) return true;
+
+  const { data: memberProfile } = await supabase
+    .from('member_profiles')
+    .select('business_role, active_role')
+    .eq('user_id', requester.id)
+    .maybeSingle();
+
+  if (memberProfile?.business_role === 'admin') return true;
+
+  const role = normalizeDashboardRole(
+    memberProfile?.active_role || memberProfile?.business_role || 'member'
+  );
+  if (role === 'applicant') return false;
+
+  const { data: application } = await supabase
+    .from('job_applications')
+    .select('id')
+    .eq('applicant_id', targetUserId)
+    .eq('employer_member_id', requester.id)
+    .limit(1)
+    .maybeSingle();
+
+  return Boolean(application);
+}
 
 function parseJsonArray(value) {
   if (Array.isArray(value)) return value;
@@ -29,11 +57,20 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get('user_id') || user.id;
+
     const supabase = createServerClient();
+
+    const allowed = await canViewApplicantProfile(supabase, user, targetUserId);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { data, error } = await supabase
       .from('applicant_profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .maybeSingle();
 
     if (error) throw error;
