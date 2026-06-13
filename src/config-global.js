@@ -32,8 +32,23 @@ export const CONFIG = {
   },
 };
 
+// Helper function to get the canonical site URL for links and auth redirects
+export const getSiteUrl = () => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return CONFIG.site.serverUrl.replace(/\/$/, '') || 'https://www.mavidah.com';
+};
+
+export const getAuthRedirectUrl = (path) => `${getSiteUrl()}${path}`;
+
 // Helper function to get default Open Graph image URL for social sharing
 export const getDefaultOgImage = () => {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || CONFIG.site.serverUrl || 'https://www.mavidah.com';
+  const siteUrl = getSiteUrl() || 'https://www.mavidah.com';
   return `${siteUrl}/logo/og-image.jpeg`;
 };

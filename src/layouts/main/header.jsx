@@ -103,7 +103,7 @@ export function Header() {
                   size="medium"
                   sx={{ flexShrink: 0 }}
                 >
-                  Join
+                  Get started
                 </Button>
               </Box>
             )}
@@ -120,7 +120,7 @@ export function Header() {
                   size="small"
                   sx={{ mr: 1 }}
                 >
-                  Join
+                  Get started
                 </Button>
                 <IconButton
                   color="inherit"
@@ -183,7 +183,7 @@ export function Header() {
                 fullWidth
                 onClick={handleDrawerToggle}
               >
-                Join
+                Get started
               </Button>
             </ListItem>
           </List>

@@ -1,4 +1,6 @@
 import { supabase } from 'src/lib/supabase';
+import { paths } from 'src/routes/paths';
+import { getAuthRedirectUrl } from 'src/config-global';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +31,7 @@ export const signUp = async ({
     email,
     password,
     options: {
+      emailRedirectTo: getAuthRedirectUrl(paths.auth.supabase.signIn),
       data: {
         full_name: `${firstName} ${lastName}`,
         business_role: businessRole,
@@ -57,15 +60,9 @@ export const signOut = async () => {
 // ----------------------------------------------------------------------
 
 export const resetPassword = async ({ email }) => {
-  const redirectTo =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/supabase/update-password`
-      : undefined;
+  const redirectTo = getAuthRedirectUrl(paths.auth.supabase.updatePassword);
 
-  const { error } = await supabase.auth.resetPasswordForEmail(
-    email,
-    redirectTo ? { redirectTo } : undefined
-  );
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
   if (error) {
     throw new Error(error.message);

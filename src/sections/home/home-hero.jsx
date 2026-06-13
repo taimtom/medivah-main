@@ -77,7 +77,7 @@ export function HomeHero() {
               size="large"
               color="primary"
             >
-              Join
+              Get started
             </Button>
           </Stack>
         </Stack>
