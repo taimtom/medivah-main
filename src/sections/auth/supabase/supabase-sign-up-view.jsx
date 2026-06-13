@@ -20,8 +20,6 @@ import { RouterLink } from 'src/routes/components';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
-import { supabase } from 'src/lib/supabase';
-
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
@@ -87,21 +85,6 @@ export function SupabaseSignUpView() {
       });
       
       await checkUserSession?.();
-
-      if (['member', 'recruiter'].includes(data.businessRole)) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        if (token && typeof window !== 'undefined') {
-          await fetch(`${window.location.origin}/api/credits/grant-free`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ type: 'signup' }),
-          }).catch(() => {});
-        }
-      }
 
       const redirectPath =
         data.businessRole === 'applicant'

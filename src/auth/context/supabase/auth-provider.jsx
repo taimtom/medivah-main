@@ -74,29 +74,31 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     checkUserSession();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Defer async work so Supabase auth is not locked (awaiting getSession/updateUser
+    // inside this callback deadlocks concurrent auth calls from sign-in/sign-up forms).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
-        if (event === 'USER_UPDATED') {
-          profileCache.current = {};
-        }
-        const mappedUser = await mapUser(session.user);
-        setState({ user: mappedUser, loading: false });
-
-        if (event === 'SIGNED_IN' && ['member', 'recruiter'].includes(mappedUser.businessRole)) {
-          const { data: sessData } = await supabase.auth.getSession();
-          const token = sessData?.session?.access_token;
-          if (token && typeof window !== 'undefined') {
-            fetch(`${window.location.origin}/api/credits/grant-free`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ type: 'signup' }),
-            }).catch(() => {});
+        setTimeout(async () => {
+          if (event === 'USER_UPDATED') {
+            profileCache.current = {};
           }
-        }
+          const mappedUser = await mapUser(session.user);
+          setState({ user: mappedUser, loading: false });
+
+          if (event === 'SIGNED_IN' && ['member', 'recruiter'].includes(mappedUser.businessRole)) {
+            const token = session.access_token;
+            if (token && typeof window !== 'undefined') {
+              fetch(`${window.location.origin}/api/credits/grant-free`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ type: 'signup' }),
+              }).catch(() => {});
+            }
+          }
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         profileCache.current = {};
         setState({ user: null, loading: false });

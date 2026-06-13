@@ -70,15 +70,18 @@ export async function ensureMemberProfile(user) {
     throw insertError;
   }
 
-  // Keep user metadata in sync when we bootstrap profile from sign up.
-  await supabase.auth.updateUser({
-    data: {
-      first_name: firstName || null,
-      last_name: restNames.join(' ') || null,
-      business_role: created.business_role,
-      active_role: activeRole,
-    },
-  });
+  // Sync metadata without blocking auth flows (updateUser can deadlock if awaited
+  // during onAuthStateChange).
+  supabase.auth
+    .updateUser({
+      data: {
+        first_name: firstName || null,
+        last_name: restNames.join(' ') || null,
+        business_role: created.business_role,
+        active_role: activeRole,
+      },
+    })
+    .catch(() => {});
 
   await supabase.from('member_role_capabilities').upsert(
     [
