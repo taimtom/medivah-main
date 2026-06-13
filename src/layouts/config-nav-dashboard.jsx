@@ -46,7 +46,7 @@ const ADMIN_NAV = [
   {
     subheader: 'Overview',
     items: [
-      { title: 'Analytics', path: paths.dashboard.root, icon: ICONS.analytics },
+      { title: 'Super Admin Home', path: paths.dashboard.root, icon: ICONS.analytics },
     ],
   },
   /**

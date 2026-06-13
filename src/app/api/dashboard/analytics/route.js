@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { createServerClient } from 'src/lib/supabase';
 import { getRequestUser } from 'src/lib/request-user';
-import { normalizeDashboardRole } from 'src/lib/role-capabilities';
+import { canAccessAdminMode, normalizeDashboardRole } from 'src/lib/role-capabilities';
 
 function dateRangeFilter(query, field, fromDate, toDate) {
   let scoped = query;
@@ -31,14 +31,23 @@ export async function GET(request) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    const role =
-      memberProfile?.business_role === 'admin'
-        ? 'admin'
-        : normalizeDashboardRole(memberProfile?.active_role || memberProfile?.business_role || 'member');
+    const activeRole = normalizeDashboardRole(
+      memberProfile?.active_role || memberProfile?.business_role || 'member'
+    );
+    const isAdminView = canAccessAdminMode({
+      businessRole: memberProfile?.business_role,
+      activeRole,
+    });
+    const role = isAdminView ? 'admin' : activeRole;
 
     // Admins may pass an explicit memberId to scope results; others are always scoped to themselves
     const requestedMemberId = searchParams.get('memberId');
-    const scopeMember = role === 'admin' && requestedMemberId ? requestedMemberId : role === 'admin' ? null : user.id;
+    const scopeMember =
+      role === 'admin' && requestedMemberId
+        ? requestedMemberId
+        : role === 'admin'
+          ? null
+          : user.id;
 
     const scopedTable = (table, ownershipColumn = 'member_id') => {
       const base = supabase.from(table).select('*', { count: 'exact', head: true });

@@ -5,11 +5,20 @@ import { getRequestUser } from 'src/lib/request-user';
 import {
   SWITCHABLE_ROLES,
   buildRoleCapabilities,
+  getRoleLandingPath,
   getRoleOnboardingPath,
   normalizeDashboardRole,
+  isSuperAdmin,
 } from 'src/lib/role-capabilities';
 
 const SWITCHABLE_ROLE_VALUES = SWITCHABLE_ROLES.map((item) => item.role);
+
+function canSwitchToRole(memberProfile, role) {
+  if (role === 'admin') {
+    return isSuperAdmin(memberProfile?.business_role);
+  }
+  return SWITCHABLE_ROLE_VALUES.includes(role);
+}
 
 async function getOrCreateMemberProfile(supabase, user) {
   const { data: existing, error: fetchError } = await supabase
@@ -158,12 +167,33 @@ export async function PATCH(request) {
 
     const payload = await request.json();
     const role = normalizeDashboardRole(payload.role);
-    if (!SWITCHABLE_ROLE_VALUES.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-    }
 
     const supabase = createServerClient();
     const state = await getRoleState(supabase, user);
+
+    if (!canSwitchToRole({ business_role: state.businessRole }, role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    if (role === 'admin') {
+      await supabase
+        .from('member_profiles')
+        .update({ active_role: 'admin', updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+      await supabase.auth.admin.updateUserById(user.id, {
+        user_metadata: { ...user.user_metadata, active_role: 'admin' },
+      });
+
+      return NextResponse.json(
+        {
+          activeRole: 'admin',
+          landingPath: getRoleLandingPath('admin'),
+          roleCapabilities: (await getRoleState(supabase, user)).roleCapabilities,
+        },
+        { status: 200 }
+      );
+    }
+
     const existing = state.roleCapabilities.find((capability) => capability.role === role);
     const nextStatus = existing?.status === 'active' ? 'active' : 'in_progress';
 

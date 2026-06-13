@@ -16,8 +16,19 @@ import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 
 import { Iconify } from 'src/components/iconify';
+import { supabase } from 'src/lib/supabase';
 import { useAuthContext } from 'src/auth/hooks';
 import { AnalyticsWidgetSummary } from './analytics-widget-summary';
+
+// ----------------------------------------------------------------------
+
+async function getAccessToken() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.access_token || '';
+}
 
 // ----------------------------------------------------------------------
 
@@ -76,6 +87,7 @@ export function AnalyticsView() {
   });
   const [loading, setLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [adminOverview, setAdminOverview] = useState(null);
 
   useEffect(() => {
     if (authLoading) return undefined;
@@ -84,6 +96,7 @@ export function AnalyticsView() {
       setStats(EMPTY_STATS);
       setEngagementStats(EMPTY_ENGAGEMENT);
       setRecentActivity([]);
+      setAdminOverview(null);
       setLoading(false);
       return undefined;
     }
@@ -93,11 +106,9 @@ export function AnalyticsView() {
     (async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({
-          role: user.role || 'member',
-          memberId: user.id,
-        });
-        const response = await fetch(`/api/dashboard/analytics/summary?${params.toString()}`, {
+        const token = await getAccessToken();
+        const response = await fetch('/api/dashboard/analytics/summary', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           signal: ac.signal,
         });
         const body = await response.json();
@@ -105,6 +116,7 @@ export function AnalyticsView() {
 
         setStats(body.stats);
         setRecentActivity(body.recentActivity || []);
+        setAdminOverview(body.adminOverview || null);
         setEngagementStats({
           ...EMPTY_ENGAGEMENT,
           ...body.engagement,
@@ -116,6 +128,7 @@ export function AnalyticsView() {
         setStats(EMPTY_STATS);
         setEngagementStats(EMPTY_ENGAGEMENT);
         setRecentActivity([]);
+        setAdminOverview(null);
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
@@ -169,6 +182,7 @@ export function AnalyticsView() {
 
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const isApplicant = user?.role === 'applicant';
+  const isAdmin = user?.role === 'admin';
 
   if (isApplicant) {
     const breakdown = stats.applicationStatusBreakdown || {};
@@ -238,7 +252,64 @@ export function AnalyticsView() {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Stack spacing={3}>
         {/* Header */}
-        <Typography variant="h4">Analytics Dashboard</Typography>
+        <Typography variant="h4">
+          {isAdmin ? 'Super Admin Dashboard' : 'Analytics Dashboard'}
+        </Typography>
+
+        {isAdmin && adminOverview && (
+          <>
+            <Typography variant="h6">Platform Overview</Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={3}>
+                <AnalyticsWidgetSummary
+                  title="Total Members"
+                  total={adminOverview.totalMembers}
+                  icon="solar:users-group-rounded-bold-duotone"
+                  color="primary"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <AnalyticsWidgetSummary
+                  title="Total Applicants"
+                  total={adminOverview.totalApplicants}
+                  icon="solar:user-check-bold-duotone"
+                  color="info"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <AnalyticsWidgetSummary
+                  title="Verification Requests"
+                  total={adminOverview.verificationRequests}
+                  icon="solar:shield-check-bold-duotone"
+                  color="warning"
+                  subtitle={`${adminOverview.pendingVerifications} pending review`}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <AnalyticsWidgetSummary
+                  title="Applications"
+                  total={adminOverview.totalApplications}
+                  icon="solar:document-add-bold-duotone"
+                  color="success"
+                  subtitle={`${adminOverview.publishedJobs} published jobs`}
+                />
+              </Grid>
+            </Grid>
+
+            {Object.keys(adminOverview.verificationByStatus || {}).length > 0 && (
+              <Card>
+                <CardHeader title="Verification Queue" />
+                <CardContent>
+                  <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
+                    {Object.entries(adminOverview.verificationByStatus).map(([status, count]) => (
+                      <Chip key={status} label={`${status}: ${count}`} size="small" variant="outlined" />
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
 
         {/* Configuration Warning */}
         {!isSupabaseConfigured && (
@@ -249,6 +320,8 @@ export function AnalyticsView() {
             See <code>ENV_ADDITIONS.md</code> for setup instructions.
           </Alert>
         )}
+
+        <Typography variant="h6">{isAdmin ? 'Platform Activity' : 'Content & Performance'}</Typography>
 
         {/* Content Stats Grid */}
         <Grid container spacing={3}>

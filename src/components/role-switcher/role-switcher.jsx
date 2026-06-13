@@ -16,7 +16,13 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { supabase } from 'src/lib/supabase';
-import { SWITCHABLE_ROLES, getRoleLandingPath, getRoleOnboardingPath } from 'src/lib/role-capabilities';
+import {
+  ADMIN_ROLE,
+  SWITCHABLE_ROLES,
+  getRoleLandingPath,
+  getRoleOnboardingPath,
+  isSuperAdmin,
+} from 'src/lib/role-capabilities';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -70,21 +76,30 @@ export function RoleSwitcher() {
     fetchRoles();
   }, [user?.id, user?.role]);
 
-  const activeOption = useMemo(
-    () => SWITCHABLE_ROLES.find((option) => option.role === activeRole),
-    [activeRole]
-  );
+  const activeOption = useMemo(() => {
+    if (activeRole === 'admin') return ADMIN_ROLE;
+    return SWITCHABLE_ROLES.find((option) => option.role === activeRole);
+  }, [activeRole]);
 
-  const roleOptions = useMemo(
-    () =>
-      SWITCHABLE_ROLES.map((option) => ({
-        ...option,
-        ...(capabilities.find((capability) => capability.role === option.role) || {
-          status: 'not_started',
-        }),
-      })),
-    [capabilities]
-  );
+  const roleOptions = useMemo(() => {
+    const baseRoles = SWITCHABLE_ROLES.map((option) => ({
+      ...option,
+      ...(capabilities.find((capability) => capability.role === option.role) || {
+        status: 'not_started',
+      }),
+    }));
+
+    if (!isSuperAdmin(user?.businessRole)) {
+      return baseRoles;
+    }
+
+    const adminCapability = capabilities.find((capability) => capability.role === 'admin') || {
+      ...ADMIN_ROLE,
+      status: 'active',
+    };
+
+    return [...baseRoles, adminCapability];
+  }, [capabilities, user?.businessRole]);
 
   const refreshUser = async () => {
     await checkUserSession({ refreshProfile: true });
@@ -98,7 +113,7 @@ export function RoleSwitcher() {
       const token = await getAccessToken();
       if (!token) throw new Error('Your session has expired. Please sign in again.');
 
-      const isReady = option.status === 'active';
+      const isReady = option.status === 'active' || option.role === 'admin';
       const endpoint = isReady ? '/api/account/roles/switch' : '/api/account/roles';
       const response = await fetch(endpoint, {
         method: 'PATCH',
@@ -159,7 +174,9 @@ export function RoleSwitcher() {
         <Box sx={{ px: 1, pb: 1 }}>
           <Typography variant="subtitle2">Choose dashboard view</Typography>
           <Typography variant="caption" color="text.secondary">
-            One account can keep both applicant and recruiter workspaces.
+            {isSuperAdmin(user?.businessRole)
+              ? 'Switch between applicant, recruiter, and super admin workspaces.'
+              : 'One account can keep both applicant and recruiter workspaces.'}
           </Typography>
         </Box>
 
@@ -174,7 +191,7 @@ export function RoleSwitcher() {
           const isLoading = loadingRole === option.role;
           const actionLabel = isCurrent
             ? 'Current'
-            : option.status === 'active'
+            : option.role === 'admin' || option.status === 'active'
               ? 'Switch'
               : STATUS_LABELS[option.status] || 'Set up';
 

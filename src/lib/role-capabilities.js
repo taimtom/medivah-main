@@ -2,6 +2,14 @@ import { paths } from 'src/routes/paths';
 
 export const ROLE_CAPABILITY_STATUSES = ['not_started', 'in_progress', 'active'];
 
+export const ADMIN_ROLE = {
+  role: 'admin',
+  label: 'Super Admin',
+  description: 'Platform overview — users, jobs, applicants, and verification queue.',
+  onboardingPath: paths.dashboard.root,
+  landingPath: paths.dashboard.root,
+};
+
 export const SWITCHABLE_ROLES = [
   {
     role: 'applicant',
@@ -24,12 +32,22 @@ export function normalizeDashboardRole(role = 'recruiter') {
   return 'recruiter';
 }
 
+export function isSuperAdmin(businessRole) {
+  return businessRole === 'admin';
+}
+
+export function canAccessAdminMode({ businessRole, activeRole } = {}) {
+  return businessRole === 'admin' && normalizeDashboardRole(activeRole) === 'admin';
+}
+
 export function getRoleLandingPath(role) {
+  if (role === 'admin') return ADMIN_ROLE.landingPath;
   const option = SWITCHABLE_ROLES.find((item) => item.role === role);
   return option?.landingPath || paths.dashboard.root;
 }
 
 export function getRoleOnboardingPath(role) {
+  if (role === 'admin') return ADMIN_ROLE.onboardingPath;
   const option = SWITCHABLE_ROLES.find((item) => item.role === role);
   return option?.onboardingPath || paths.dashboard.root;
 }
@@ -57,14 +75,10 @@ export function buildRoleCapabilities(memberProfile, rows = []) {
 
   if (memberProfile?.business_role === 'admin') {
     capabilities.push({
-      role: 'admin',
-      label: 'Admin',
-      description: 'Manage the platform.',
+      ...ADMIN_ROLE,
       status: 'active',
       onboardingStartedAt: null,
       activatedAt: memberProfile.created_at || null,
-      onboardingPath: paths.dashboard.root,
-      landingPath: paths.dashboard.root,
     });
   }
 

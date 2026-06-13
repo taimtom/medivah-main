@@ -8,9 +8,17 @@ import {
   buildRoleCapabilities,
   getRoleOnboardingPath,
   normalizeDashboardRole,
+  isSuperAdmin,
 } from 'src/lib/role-capabilities';
 
 const SWITCHABLE_ROLE_VALUES = SWITCHABLE_ROLES.map((item) => item.role);
+
+function canSwitchToRole(memberProfile, role) {
+  if (role === 'admin') {
+    return isSuperAdmin(memberProfile?.business_role);
+  }
+  return SWITCHABLE_ROLE_VALUES.includes(role);
+}
 
 export async function PATCH(request) {
   try {
@@ -21,9 +29,6 @@ export async function PATCH(request) {
 
     const payload = await request.json();
     const role = normalizeDashboardRole(payload.role);
-    if (!SWITCHABLE_ROLE_VALUES.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-    }
 
     const supabase = createServerClient();
     const { data: memberProfile, error: profileError } = await supabase
@@ -37,6 +42,10 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
     }
 
+    if (!canSwitchToRole(memberProfile, role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
     const { data: capabilityRows, error: capabilityError } = await supabase
       .from('member_role_capabilities')
       .select('*')
@@ -47,7 +56,7 @@ export async function PATCH(request) {
     const capabilities = buildRoleCapabilities(memberProfile, capabilityRows || []);
     const capability = capabilities.find((item) => item.role === role);
 
-    if (capability?.status !== 'active') {
+    if (role !== 'admin' && capability?.status !== 'active') {
       return NextResponse.json(
         {
           error: `${capability?.label || 'This role'} onboarding is not complete yet.`,
