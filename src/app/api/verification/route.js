@@ -63,14 +63,38 @@ export async function POST(request) {
       );
     }
 
+    const requesterName = (payload.requester_name || '').trim();
+    const requesterEmail = (payload.requester_email || '').trim();
+    if (!requesterName || !requesterEmail) {
+      return NextResponse.json(
+        { error: 'requester_name and requester_email are required' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServerClient();
     const role = await resolveRole(supabase, user);
 
     // Non-admins can only submit for themselves; admins may pass an explicit member_id
     const memberId = role === 'admin' && payload.member_id ? payload.member_id : user.id;
 
-    const requesterName = (payload.requester_name || '').trim() || null;
-    const requesterEmail = (payload.requester_email || '').trim() || null;
+    const verificationFields = {
+      requester_name: requesterName,
+      requester_email: requesterEmail,
+      company_name: payload.company_name,
+      company_email: payload.company_email,
+      phone_number: payload.phone_number || null,
+      domain: payload.domain || null,
+      address: payload.address || null,
+      business_registration_number: payload.business_registration_number || null,
+      documents: payload.documents || [],
+    };
+
+    const auditMetadata = {
+      company_name: payload.company_name,
+      requester_name: requesterName,
+      requester_email: requesterEmail,
+    };
 
     const { data: existing, error: selectError } = await supabase
       .from('employer_verifications')
@@ -103,16 +127,8 @@ export async function POST(request) {
       const { data: updated, error: updateError } = await supabase
         .from('employer_verifications')
         .update({
-          company_name: payload.company_name,
-          company_email: payload.company_email,
-          phone_number: payload.phone_number || null,
-          domain: payload.domain || null,
-          address: payload.address || null,
-          business_registration_number: payload.business_registration_number || null,
-          documents: payload.documents || [],
+          ...verificationFields,
           status: 'pending',
-          requester_name: requesterName,
-          requester_email: requesterEmail,
           review_notes: null,
           reviewed_by: null,
           reviewed_at: null,
@@ -143,7 +159,7 @@ export async function POST(request) {
           action_type: 'verification_resubmitted',
           entity_type: 'employer_verification',
           entity_id: updated.id,
-          metadata: { company_name: payload.company_name },
+          metadata: auditMetadata,
         },
       ]);
 
@@ -155,15 +171,7 @@ export async function POST(request) {
       .insert([
         {
           member_id: memberId,
-          requester_name: requesterName,
-          requester_email: requesterEmail,
-          company_name: payload.company_name,
-          company_email: payload.company_email,
-          phone_number: payload.phone_number || null,
-          domain: payload.domain || null,
-          address: payload.address || null,
-          business_registration_number: payload.business_registration_number || null,
-          documents: payload.documents || [],
+          ...verificationFields,
           status: 'pending',
         },
       ])
@@ -191,7 +199,7 @@ export async function POST(request) {
         action_type: 'verification_requested',
         entity_type: 'employer_verification',
         entity_id: data.id,
-        metadata: { company_name: payload.company_name },
+        metadata: auditMetadata,
       },
     ]);
 

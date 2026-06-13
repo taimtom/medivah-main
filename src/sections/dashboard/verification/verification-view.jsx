@@ -66,6 +66,8 @@ const STATUS_META = {
 };
 
 const EMPTY_FORM = {
+  requester_name: '',
+  requester_email: '',
   company_name: '',
   company_email: '',
   phone_number: '',
@@ -143,6 +145,12 @@ function VerificationStatusCard({ verification }) {
 
           {/* Details grid */}
           <Stack spacing={1.5}>
+            {verification.requester_name && (
+              <DetailRow label="Submitted by" value={verification.requester_name} />
+            )}
+            {verification.requester_email && (
+              <DetailRow label="Contact email" value={verification.requester_email} />
+            )}
             <DetailRow label="Organisation" value={verification.company_name} />
             <DetailRow label="Business Email" value={verification.company_email} />
             {verification.phone_number && (
@@ -189,8 +197,16 @@ function VerificationForm({ existingVerification, onSuccess }) {
   const { user } = useAuthContext();
   const fileRef = useRef();
   const [form, setForm] = useState(() => {
-    if (!existingVerification) return EMPTY_FORM;
+    if (!existingVerification) {
+      return {
+        ...EMPTY_FORM,
+        requester_name: user?.displayName || '',
+        requester_email: user?.email || '',
+      };
+    }
     return {
+      requester_name: existingVerification.requester_name || user?.displayName || '',
+      requester_email: existingVerification.requester_email || user?.email || '',
       company_name: existingVerification.company_name || '',
       company_email: existingVerification.company_email || '',
       phone_number: existingVerification.phone_number || '',
@@ -217,6 +233,10 @@ function VerificationForm({ existingVerification, onSuccess }) {
 
   const handleSubmit = async () => {
     setError('');
+    if (!form.requester_name || !form.requester_email) {
+      setError('Your name and email are required.');
+      return;
+    }
     if (!form.company_name || !form.company_email) {
       setError('Organisation name and business email are required.');
       return;
@@ -247,8 +267,8 @@ function VerificationForm({ existingVerification, onSuccess }) {
         },
         body: JSON.stringify({
           member_id: user.id,
-          requester_name: user.displayName || '',
-          requester_email: user.email || '',
+          requester_name: form.requester_name,
+          requester_email: form.requester_email,
           company_name: form.company_name,
           company_email: form.company_email,
           phone_number: form.phone_number || null,
@@ -291,6 +311,33 @@ function VerificationForm({ existingVerification, onSuccess }) {
           </Stack>
 
           {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
+
+          <Divider />
+
+          {/* Requester Details */}
+          <Stack spacing={0.5}>
+            <Typography variant="overline" color="text.secondary">
+              Your Details
+            </Typography>
+          </Stack>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              label="Your Name"
+              value={form.requester_name}
+              onChange={handleField('requester_name')}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Your Email"
+              type="email"
+              value={form.requester_email}
+              onChange={handleField('requester_email')}
+              fullWidth
+              required
+            />
+          </Stack>
 
           <Divider />
 
@@ -510,6 +557,13 @@ function AdminVerificationPanel({ rows, onStatusUpdated }) {
                       }
                     />
                   </Stack>
+                  {(row.requester_name || row.requester_email) && (
+                    <Typography variant="caption" color="text.secondary">
+                      {row.requester_name}
+                      {row.requester_name && row.requester_email ? ' · ' : ''}
+                      {row.requester_email}
+                    </Typography>
+                  )}
                   <Typography variant="body2" color="text.secondary">{row.company_email}</Typography>
                   {row.phone_number && <Typography variant="caption" color="text.secondary">{row.phone_number}</Typography>}
                   {row.address && <Typography variant="caption" color="text.secondary">{row.address}</Typography>}
